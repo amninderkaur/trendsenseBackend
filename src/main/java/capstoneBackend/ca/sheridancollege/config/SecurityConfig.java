@@ -48,14 +48,10 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         
-        config.setAllowedOrigins(List.of(
-                "http://localhost:3000",
-                "http://localhost:8081",
-                "http://10.16.129.78:8081"
-        ));
+        config.addAllowedOriginPattern("*");
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
+        config.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
