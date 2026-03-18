@@ -87,11 +87,12 @@ public class WardrobeController {
             // 2) Forward file to FastAPI via WebClient
             MultipartBodyBuilder builder = new MultipartBodyBuilder();
             builder.part("file", new ByteArrayResource(file.getBytes()) {
-                @Override 
-                public String getFilename() { 
-                    return file.getOriginalFilename(); 
+                @Override
+                public String getFilename() {
+                    return file.getOriginalFilename();
                 }
             }, MediaType.parseMediaType(file.getContentType()));
+            builder.part("userId", user.getId());
 
            
 
