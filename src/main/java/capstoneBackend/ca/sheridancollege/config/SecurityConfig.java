@@ -47,14 +47,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // allow frontend URLs
+        
         config.setAllowedOrigins(List.of(
-                "http://localhost:3000",    // React Web
-                "http://localhost:8081",    // another local frontend
-                "http://10.0.2.2:19006"    // Expo Android emulator
+                "http://localhost:3000",
+                "http://localhost:8081",
+                "http://10.16.129.78:8081"
         ));
-
-        config.addAllowedOriginPattern("*");
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

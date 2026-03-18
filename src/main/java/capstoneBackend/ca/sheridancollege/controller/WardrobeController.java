@@ -33,10 +33,14 @@ import capstoneBackend.ca.sheridancollege.beans.WardrobeItem;
 import capstoneBackend.ca.sheridancollege.beans.repositories.WardrobeRepository;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/wardrobe")
 public class WardrobeController {
+
+    private static final List<String> ALLOWED_TYPES = List.of("image/jpeg", "image/png", "image/webp", "image/jpg");
 
     private final WardrobeRepository wardrobeRepository;
     private final WebClient aiClient;
@@ -56,11 +60,23 @@ public class WardrobeController {
         return ResponseEntity.ok(items);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getById(@AuthenticationPrincipal User user, @org.springframework.web.bind.annotation.PathVariable String id) {
+        return wardrobeRepository.findById(id)
+                .filter(item -> item.getUserId().equals(user.getId()))
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     
     @PostMapping("/upload")
     public ResponseEntity<?> uploadAndDetect(
             @AuthenticationPrincipal User user,
             @RequestPart("file") MultipartFile file) {
+
+        if (!ALLOWED_TYPES.contains(file.getContentType())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Only JPEG, PNG, and WebP images are allowed"));
+        }
 
         try {
 
@@ -87,7 +103,7 @@ public class WardrobeController {
                 .bodyToMono(Map.class)
                 .block();
 
-            System.out.println("AI Response: " + aiResp);
+            log.info("AI Response: {}", aiResp);
 
             // 3) Extract detections
             List<Map<String, Object>> detections = (List<Map<String, Object>>) aiResp.get("detections");
@@ -127,8 +143,7 @@ public class WardrobeController {
             ));
 
         } catch (Exception e) {
-            System.err.println("Error processing upload: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error processing upload: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                  .body(Map.of("error", e.getMessage()));
         }
