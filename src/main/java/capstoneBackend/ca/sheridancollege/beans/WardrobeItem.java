@@ -23,4 +23,5 @@ public class WardrobeItem {
     private List<String> detectedItems;
     private Date uploadDate;
     private String tag;
+    private List<String> cropUrls;
 }

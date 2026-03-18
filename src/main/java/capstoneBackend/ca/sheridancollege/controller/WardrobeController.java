@@ -121,6 +121,12 @@ public class WardrobeController {
                 .distinct()
                 .collect(Collectors.toList());
 
+            // 4b) Extract crop URLs
+            List<String> cropUrls = detections.stream()
+                .map(d -> (String) d.get("crop_url"))
+                .filter(url -> url != null)
+                .collect(Collectors.toList());
+
             
 
             // 5) Build WardrobeItem and save
@@ -130,6 +136,7 @@ public class WardrobeController {
             item.setDetectedItems(labels);
             item.setUploadDate(new Date());
             item.setTag(labels.isEmpty() ? "Unknown" : labels.get(0));
+            item.setCropUrls(cropUrls);
 
             WardrobeItem saved = wardrobeRepository.save(item);
 
