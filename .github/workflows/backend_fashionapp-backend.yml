@@ -6,8 +6,11 @@ name: Build and deploy JAR app to Azure Web App - fashionapp-backend
 on:
   push:
     branches:
-      - backend
+      - main
   workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -51,3 +54,4 @@ jobs:
           slot-name: 'Production'
           package: '*.jar'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_624D3BD04635463E9BFDD5A859628CFE }}
+
