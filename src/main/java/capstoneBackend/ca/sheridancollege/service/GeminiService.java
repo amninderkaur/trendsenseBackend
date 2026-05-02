@@ -17,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Wraps two Gemini API calls:
- *  1. gemini-2.0-flash:generateContent  – detects clothing items in an image
+ *  1. gemini-2.5-flash:generateContent  – detects clothing items in an image
  *  2. imagen-3.0-generate-002:predict   – generates a clean product image per item
  */
 @Slf4j
@@ -69,7 +69,7 @@ public class GeminiService {
         try {
             Map<?, ?> response = geminiClient.post()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/models/gemini-2.0-flash:generateContent")
+                            .path("/models/gemini-2.5-flash:generateContent")
                             .queryParam("key", apiKey)
                             .build())
                     .header("Content-Type", "application/json")
@@ -103,7 +103,7 @@ public class GeminiService {
         try {
             Map<?, ?> response = geminiClient.post()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/models/gemini-2.0-flash:generateContent")
+                            .path("/models/gemini-2.5-flash:generateContent")
                             .queryParam("key", apiKey)
                             .build())
                     .header("Content-Type", "application/json")
