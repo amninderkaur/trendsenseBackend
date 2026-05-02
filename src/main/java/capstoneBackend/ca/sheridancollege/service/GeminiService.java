@@ -103,7 +103,7 @@ public class GeminiService {
         try {
             Map<?, ?> response = geminiClient.post()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/models/gemini-2.5-flash:generateContent")
+                            .path("/models/gemini-2.5-flash-image:generateContent")
                             .queryParam("key", apiKey)
                             .build())
                     .header("Content-Type", "application/json")
@@ -147,7 +147,7 @@ public class GeminiService {
                 Map.of("parts", List.of(Map.of("text", prompt)))
             ),
             "generationConfig", Map.of(
-                "responseModalities", List.of("IMAGE")
+                "responseModalities", List.of("TEXT", "IMAGE")
             )
         );
     }
