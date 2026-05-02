@@ -61,6 +61,9 @@ public class GeminiService {
      * @return list of detected items; empty list if none found or on error
      */
     public List<DetectedItem> detectItems(String base64Image, String mimeType) {
+        log.info("detectItems: mimeType={}, imageBytes={}", mimeType, base64Image.length());
+        log.info("detectItems: apiKey starts with: {}", apiKey != null ? apiKey.substring(0, Math.min(8, apiKey.length())) + "..." : "NULL");
+
         Map<String, Object> requestBody = buildDetectRequest(base64Image, mimeType);
 
         try {
@@ -75,13 +78,14 @@ public class GeminiService {
                     .bodyToMono(Map.class)
                     .block();
 
+            log.info("Gemini detect raw response: {}", response);
             return parseDetectResponse(response);
 
         } catch (WebClientResponseException e) {
-            log.error("Gemini detect call failed: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
+            log.error("Gemini detect call failed: {} — body: {}", e.getStatusCode(), e.getResponseBodyAsString());
             return List.of();
         } catch (Exception e) {
-            log.error("Unexpected error during Gemini detect call", e);
+            log.error("Unexpected error during Gemini detect call: {}", e.getMessage(), e);
             return List.of();
         }
     }
@@ -195,7 +199,7 @@ public class GeminiService {
             return result;
 
         } catch (Exception e) {
-            log.error("Failed to parse Gemini detect response: {}", e.getMessage());
+            log.error("Failed to parse Gemini detect response: {} — full response: {}", e.getMessage(), response);
             return List.of();
         }
     }
