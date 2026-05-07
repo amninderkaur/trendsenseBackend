@@ -103,7 +103,7 @@ public class GeminiService {
         try {
             Map<?, ?> response = geminiClient.post()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/models/imagen-4.0-fast-generate-001:predict")
+                            .path("/models/gemini-2.5-flash-preview-04-17:generateContent")
                             .queryParam("key", apiKey)
                             .build())
                     .header("Content-Type", "application/json")
@@ -143,8 +143,12 @@ public class GeminiService {
 
     private Map<String, Object> buildGenerateRequest(String prompt) {
         return Map.of(
-            "instances", List.of(Map.of("prompt", prompt)),
-            "parameters", Map.of("sampleCount", 1)
+            "contents", List.of(
+                Map.of("parts", List.of(Map.of("text", prompt)))
+            ),
+            "generationConfig", Map.of(
+                "responseModalities", List.of("TEXT", "IMAGE")
+            )
         );
     }
 
@@ -205,14 +209,27 @@ public class GeminiService {
         if (response == null) return null;
 
         try {
-            List<?> predictions = (List<?>) response.get("predictions");
-            if (predictions == null || predictions.isEmpty()) return null;
+            List<?> candidates = (List<?>) response.get("candidates");
+            if (candidates == null || candidates.isEmpty()) return null;
 
-            Map<?, ?> first = (Map<?, ?>) predictions.get(0);
-            return (String) first.get("bytesBase64Encoded");
+            Map<?, ?> firstCandidate = (Map<?, ?>) candidates.get(0);
+            Map<?, ?> content = (Map<?, ?>) firstCandidate.get("content");
+            List<?> parts = (List<?>) content.get("parts");
+            if (parts == null || parts.isEmpty()) return null;
+
+            for (Object part : parts) {
+                Map<?, ?> partMap = (Map<?, ?>) part;
+                Map<?, ?> inlineData = (Map<?, ?>) partMap.get("inlineData");
+                if (inlineData != null) {
+                    return (String) inlineData.get("data");
+                }
+            }
+
+            log.warn("No inlineData part found in generate response: {}", response);
+            return null;
 
         } catch (Exception e) {
-            log.error("Failed to parse Imagen generate response: {} — full response: {}", e.getMessage(), response);
+            log.error("Failed to parse Gemini generate response: {} — full response: {}", e.getMessage(), response);
             return null;
         }
     }
