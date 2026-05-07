@@ -103,7 +103,7 @@ public class GeminiService {
         try {
             Map<?, ?> response = geminiClient.post()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/models/gemini-2.5-flash-preview-image-generation:generateContent")
+                            .path("/models/gemini-2.5-flash-image:generateContent")
                             .queryParam("key", apiKey)
                             .build())
                     .header("Content-Type", "application/json")
