@@ -91,6 +91,40 @@ public class GeminiService {
     }
 
     /**
+     * Sends a plain text prompt to gemini-2.5-flash and returns the text response.
+     *
+     * @param prompt the full prompt string
+     * @return raw text from Gemini, or null on failure
+     */
+    public String sendTextPrompt(String prompt) {
+        Map<String, Object> requestBody = Map.of(
+            "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt))))
+        );
+
+        try {
+            Map<?, ?> response = geminiClient.post()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/models/gemini-2.5-flash:generateContent")
+                            .queryParam("key", apiKey)
+                            .build())
+                    .header("Content-Type", "application/json")
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            return extractText(response);
+
+        } catch (WebClientResponseException e) {
+            log.error("Gemini text prompt call failed: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return null;
+        } catch (Exception e) {
+            log.error("Unexpected error during Gemini text prompt call", e);
+            return null;
+        }
+    }
+
+    /**
      * Generates a clean, white-background product image for one clothing item.
      *
      * @param description one-sentence description from the detect step
@@ -237,6 +271,22 @@ public class GeminiService {
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    @SuppressWarnings("unchecked")
+    private String extractText(Map<?, ?> response) {
+        if (response == null) return null;
+        try {
+            List<?> candidates = (List<?>) response.get("candidates");
+            if (candidates == null || candidates.isEmpty()) return null;
+            Map<?, ?> content = (Map<?, ?>) ((Map<?, ?>) candidates.get(0)).get("content");
+            List<?> parts = (List<?>) content.get("parts");
+            if (parts == null || parts.isEmpty()) return null;
+            return (String) ((Map<?, ?>) parts.get(0)).get("text");
+        } catch (Exception e) {
+            log.error("Failed to extract text from Gemini response: {}", e.getMessage());
+            return null;
+        }
+    }
 
     private String stripMarkdownCodeBlock(String text) {
         String trimmed = text.trim();
