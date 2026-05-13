@@ -499,6 +499,59 @@ Gemini picks 2–3 outfit combinations from the user's actual wardrobe items tha
 
 ---
 
+### Shopping Suggestions
+
+#### Get AI Shopping Suggestions
+```
+POST /api/shopping/suggest
+```
+Uses Gemini AI with **Google Search grounding** to find real products available in Canada that fill gaps in the user's wardrobe. Personalises results using the user's colour season, style preferences, modesty level, and cultural preferences. Returns real product links sourced from live web search.
+
+**Body:**
+```json
+{
+  "destination": "Canada",
+  "budget": 200.00,
+  "currency": "CAD",
+  "location": "Toronto, Ontario",
+  "focusCategory": "outerwear",
+  "preferOnline": false
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `destination` | String | Country/region for product availability |
+| `budget` | Number | Total budget for all suggestions |
+| `currency` | String | Currency code e.g. `"CAD"`, `"USD"` |
+| `location` | String | User's city for nearby store suggestions |
+| `focusCategory` | String | Optional — target a specific gap e.g. `"shoes"`. If empty, gaps are auto-detected from wardrobe |
+| `preferOnline` | Boolean | `true` = online stores only, `false` = include physical stores |
+
+**Response:**
+```json
+{
+  "season": "Autumn",
+  "gapsIdentified": ["outerwear", "shoes"],
+  "totalEstimate": "$185.00 CAD",
+  "withinBudget": true,
+  "suggestions": [
+    {
+      "item": "Camel wool trench coat",
+      "category": "outerwear",
+      "whyItFits": "Earthy camel tone matches your Autumn palette perfectly",
+      "estimatedPrice": "$120 CAD",
+      "storeName": "Zara Canada",
+      "storeType": "Online + In-store",
+      "link": "https://www.zara.com/ca/...",
+      "nearbyLocation": "Eaton Centre, Toronto"
+    }
+  ]
+}
+```
+
+---
+
 ### AI Chat
 
 #### Fashion Chatbot

@@ -132,6 +132,69 @@ public class GeminiService {
     }
 
     /**
+     * Sends a text prompt to gemini-2.5-flash with Google Search grounding enabled.
+     * Returns the text response plus any real URLs from the grounding metadata.
+     *
+     * @param prompt the full prompt string
+     * @return GroundedResponse with text + list of source URLs, or null on failure
+     */
+    @SuppressWarnings("unchecked")
+    public GroundedResponse sendTextPromptWithGrounding(String prompt) {
+        Map<String, Object> requestBody = Map.of(
+            "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
+            "tools", List.of(Map.of("google_search", Map.of()))
+        );
+
+        try {
+            Map<?, ?> response = geminiClient.post()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/models/gemini-2.5-flash:generateContent")
+                            .queryParam("key", apiKey)
+                            .build())
+                    .header("Content-Type", "application/json")
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            String text = extractText(response);
+
+            // Extract grounding chunk URIs from groundingMetadata
+            List<String> groundingUrls = new ArrayList<>();
+            try {
+                List<?> candidates = (List<?>) response.get("candidates");
+                if (candidates != null && !candidates.isEmpty()) {
+                    Map<?, ?> candidate = (Map<?, ?>) candidates.get(0);
+                    Map<?, ?> groundingMetadata = (Map<?, ?>) candidate.get("groundingMetadata");
+                    if (groundingMetadata != null) {
+                        List<?> chunks = (List<?>) groundingMetadata.get("groundingChunks");
+                        if (chunks != null) {
+                            for (Object chunk : chunks) {
+                                Map<?, ?> chunkMap = (Map<?, ?>) chunk;
+                                Map<?, ?> web = (Map<?, ?>) chunkMap.get("web");
+                                if (web != null && web.get("uri") != null) {
+                                    groundingUrls.add(web.get("uri").toString());
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Could not extract grounding metadata: {}", e.getMessage());
+            }
+
+            return new GroundedResponse(text, groundingUrls);
+
+        } catch (WebClientResponseException e) {
+            log.error("Gemini grounded prompt call failed: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return null;
+        } catch (Exception e) {
+            log.error("Unexpected error during Gemini grounded prompt call", e);
+            return null;
+        }
+    }
+
+    /**
      * Sends a plain text prompt to gemini-2.5-flash and returns the text response.
      *
      * @param prompt the full prompt string
@@ -433,6 +496,9 @@ public class GeminiService {
     // -------------------------------------------------------------------------
     // Inner DTO
     // -------------------------------------------------------------------------
+
+    /** Holds the text response and grounding source URLs from a search-grounded Gemini call. */
+    public record GroundedResponse(String text, List<String> groundingUrls) {}
 
     @lombok.Data
     public static class DetectedItem {
