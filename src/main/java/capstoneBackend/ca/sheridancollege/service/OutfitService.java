@@ -2,7 +2,6 @@ package capstoneBackend.ca.sheridancollege.service;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -108,34 +107,22 @@ public class OutfitService {
                     .build();
         }
 
-        // Step 6: Build image generation prompt from selected items
-        List<ClothingItem> selectedItems = wardrobe.stream()
+        // Step 6: Build response with real item images
+        List<OutfitSuggestionResponse.SelectedItem> selectedItems = wardrobe.stream()
                 .filter(item -> selectedItemIds.contains(item.getId()))
+                .map(item -> OutfitSuggestionResponse.SelectedItem.builder()
+                        .itemId(item.getId())
+                        .type(item.getTags() != null ? item.getTags().getType() : "unknown")
+                        .color(item.getTags() != null ? item.getTags().getColor() : "unknown")
+                        .imageBase64(item.getGeneratedImageBase64())
+                        .build())
                 .toList();
 
-        String itemDescriptions = selectedItems.stream()
-                .map(item -> item.getTags() != null
-                    ? item.getTags().getColor() + " " + item.getTags().getType()
-                    : "clothing item")
-                .collect(Collectors.joining(", "));
-
-        String imagePrompt = String.format(
-            "A professional fashion photography shot of a complete outfit: %s. " +
-            "White background, studio lighting, clothing laid flat or on invisible mannequin, " +
-            "clean product style photo.",
-            itemDescriptions
-        );
-
-        // Step 7: Generate outfit image
-        log.info("Generating outfit image for: {}", imagePrompt);
-        String outfitImageBase64 = geminiService.generateItemImage(imagePrompt);
-
-        // Step 8: Return response
+        // Step 7: Return response
         return OutfitSuggestionResponse.builder()
-                .selectedItemIds(selectedItemIds)
+                .selectedItems(selectedItems)
                 .reasoning(reasoning)
                 .weatherSummary(weatherSummary)
-                .outfitImageBase64(outfitImageBase64)
                 .build();
     }
 }

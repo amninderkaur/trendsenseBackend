@@ -12,8 +12,18 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class OutfitSuggestionResponse {
-    private List<String> selectedItemIds;
+    private List<SelectedItem> selectedItems;
     private String reasoning;
     private String weatherSummary;
-    private String outfitImageBase64;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class SelectedItem {
+        private String itemId;
+        private String type;
+        private String color;
+        private String imageBase64;
+    }
 }
