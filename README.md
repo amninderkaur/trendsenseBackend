@@ -21,8 +21,9 @@ Make sure you have the following installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
-cd ca.sheridancollege
+git clone (https://github.com/amninderkaur/FASHIONAPP.git)
+git checkout backend
+cd ca.sheridancolleg
 ```
 
 ---
