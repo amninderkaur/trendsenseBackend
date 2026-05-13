@@ -359,6 +359,43 @@ Fetches live weather for the city, selects the best outfit from the user's wardr
 
 ---
 
+### Outfit Analysis
+
+#### Analyse an Outfit Photo
+```
+POST /api/outfit/analyze
+Content-Type: multipart/form-data
+```
+Uploads a photo of an outfit, fetches live weather for the given city, and uses Gemini Vision to evaluate the outfit against the weather, the user's style preferences, modesty level, cultural preferences, and colour season. Fully stateless — nothing is saved to the database.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `image` | File | JPEG, PNG, or WebP photo of the outfit |
+| `city` | String | City name for live weather lookup e.g. `"Toronto"` |
+
+**Response:**
+```json
+{
+  "occasion": "casual brunch",
+  "styleScore": 7,
+  "weatherVerdict": "not suitable",
+  "weatherReason": "It's 4°C and raining — this outfit will leave you cold",
+  "whatWorksWell": [
+    "The colour palette is cohesive",
+    "The silhouette is flattering for a casual setting"
+  ],
+  "suggestions": [
+    "Add a warm coat or trench over the top",
+    "Swap the open-toe sandals for ankle boots",
+    "A scarf would add warmth without disrupting the look"
+  ],
+  "overallVerdict": "Great casual look, but needs layers for today's weather.",
+  "currentWeather": "Light rain, 4°C, Toronto"
+}
+```
+
+---
+
 ### Colour Analysis
 
 #### Analyse Colour Season from Photo
