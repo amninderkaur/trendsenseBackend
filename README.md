@@ -5,6 +5,113 @@
 
 ---
 
+## Local Setup
+
+### Prerequisites
+
+Make sure you have the following installed:
+
+- [Java 21](https://adoptium.net/)
+- [Maven](https://maven.apache.org/install.html)
+- [MongoDB](https://www.mongodb.com/try/download/community) (local) or a [MongoDB Atlas](https://www.mongodb.com/atlas) connection string
+- A code editor (IntelliJ IDEA recommended)
+
+---
+
+### 1. Clone the Repository
+
+```bash
+git clone <your-repo-url>
+cd ca.sheridancollege
+```
+
+---
+
+### 2. Get Your API Keys
+
+You need 3 API keys before running the app:
+
+| Key | Where to get it |
+|-----|----------------|
+| `MONGODB_URI` | [MongoDB Atlas](https://www.mongodb.com/atlas) → Create cluster → Connect → Copy connection string |
+| `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com) → Get API Key |
+| `OPENWEATHER_API_KEY` | [OpenWeatherMap](https://openweathermap.org/api) → Sign up → API Keys tab |
+
+---
+
+### 3. Set Environment Variables
+
+Create a file called `.env` or set these as environment variables on your machine. **Never commit these to Git.**
+
+The app reads the following variables:
+
+```
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/fashionapp
+GEMINI_API_KEY=your_gemini_api_key_here
+OPENWEATHER_API_KEY=your_openweather_api_key_here
+AI_SERVICE_URL=http://127.0.0.1:5000
+```
+
+**Option A — IntelliJ (recommended):**
+1. Run → Edit Configurations → Your Spring Boot config
+2. Click **Modify options → Environment variables**
+3. Paste all 4 variables
+
+**Option B — Terminal (Mac/Linux):**
+```bash
+export MONGODB_URI="mongodb+srv://..."
+export GEMINI_API_KEY="..."
+export OPENWEATHER_API_KEY="..."
+export AI_SERVICE_URL="http://127.0.0.1:5000"
+```
+
+**Option B — Terminal (Windows):**
+```cmd
+set MONGODB_URI=mongodb+srv://...
+set GEMINI_API_KEY=...
+set OPENWEATHER_API_KEY=...
+set AI_SERVICE_URL=http://127.0.0.1:5000
+```
+
+---
+
+### 4. Install Dependencies
+
+```bash
+mvn clean install
+```
+
+---
+
+### 5. Run the App
+
+```bash
+mvn spring-boot:run
+```
+
+The server starts on **http://localhost:8080**
+
+---
+
+### 6. Verify It's Running
+
+Open your browser or Postman and hit:
+```
+GET http://localhost:8080/api/profile
+```
+You should get a `401 Unauthorized` — that means the server is up and JWT auth is working.
+
+---
+
+### Notes
+
+- Max file upload size is **10MB** (configured in `application.properties`)
+- Uploaded wardrobe images are saved locally to `uploads/wardrobe/`
+- The `AI_SERVICE_URL` points to the Python FastAPI clothing detection service — if you don't have it running locally, wardrobe uploads will fail but all other endpoints will still work
+- `JWT_SECRET` has a default value in `application.properties` so you don't need to set it locally
+
+---
+
 ## Base URLs
 
 | Environment | URL |
