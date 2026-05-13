@@ -12,6 +12,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import capstoneBackend.ca.sheridancollege.beans.ChatMessage;
 import capstoneBackend.ca.sheridancollege.beans.ClothingItem;
 import lombok.extern.slf4j.Slf4j;
 
@@ -122,6 +123,88 @@ public class GeminiService {
             log.error("Unexpected error during Gemini text prompt call", e);
             return null;
         }
+    }
+
+    /**
+     * Sends a multi-turn chat to Gemini with the user's wardrobe as context.
+     *
+     * @param history  previous turns (oldest first), may be null/empty
+     * @param message  the user's latest message
+     * @param wardrobe the user's clothing items used to personalise suggestions
+     * @return Gemini's reply text, or an error message
+     */
+    public String chat(List<ChatMessage> history, String message, List<ClothingItem> wardrobe) {
+        // Build system instruction describing the wardrobe
+        String wardrobeDescription = buildWardrobeDescription(wardrobe);
+        String systemText =
+            "You are a personal fashion assistant helping a user pick outfits. " +
+            "Be friendly, concise, and specific. " +
+            "The user's current wardrobe:\n" + wardrobeDescription;
+
+        // Build contents array: prior history + current user message
+        List<Map<String, Object>> contents = new ArrayList<>();
+
+        if (history != null) {
+            for (ChatMessage turn : history) {
+                String role = "model".equals(turn.getRole()) ? "model" : "user";
+                contents.add(Map.of(
+                    "role", role,
+                    "parts", List.of(Map.of("text", turn.getText()))
+                ));
+            }
+        }
+
+        contents.add(Map.of(
+            "role", "user",
+            "parts", List.of(Map.of("text", message))
+        ));
+
+        Map<String, Object> requestBody = Map.of(
+            "systemInstruction", Map.of("parts", List.of(Map.of("text", systemText))),
+            "contents", contents
+        );
+
+        try {
+            Map<?, ?> response = geminiClient.post()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/models/gemini-2.5-flash:generateContent")
+                            .queryParam("key", apiKey)
+                            .build())
+                    .header("Content-Type", "application/json")
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            String reply = extractText(response);
+            return reply != null ? reply : "Sorry, I couldn't generate a response. Please try again.";
+
+        } catch (WebClientResponseException e) {
+            log.error("Gemini chat call failed: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return "Sorry, I'm having trouble connecting right now. Please try again.";
+        } catch (Exception e) {
+            log.error("Unexpected error during Gemini chat call", e);
+            return "Sorry, something went wrong. Please try again.";
+        }
+    }
+
+    private String buildWardrobeDescription(List<ClothingItem> wardrobe) {
+        if (wardrobe == null || wardrobe.isEmpty()) {
+            return "The user has not added any items to their wardrobe yet.";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (ClothingItem item : wardrobe) {
+            ClothingItem.Tags t = item.getTags();
+            if (t != null) {
+                sb.append("- ").append(t.getColor()).append(" ").append(t.getType())
+                  .append(" (").append(t.getStyle()).append(")");
+                if (t.getOccasion() != null && !t.getOccasion().isEmpty()) {
+                    sb.append(" suitable for: ").append(String.join(", ", t.getOccasion()));
+                }
+                sb.append("\n");
+            }
+        }
+        return sb.toString();
     }
 
     /**
