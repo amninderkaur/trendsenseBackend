@@ -1,6 +1,7 @@
 package capstoneBackend.ca.sheridancollege.beans;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -58,4 +59,13 @@ public class UserProfile {
     // ── 8. Personalization Features ───────────────────────────────────────────
     private List<String> recommendationBases; // "Current weather", "AI outfit generation", etc.
     private boolean styleNotifications;
+
+    // ── 9. Cultural & Modesty Preferences ────────────────────────────────────
+    private String genderAesthetic;           // "masculine" | "feminine" | "androgynous" | "mixed"
+    private String modestyLevel;              // "low" | "medium" | "high" | "full"
+    private List<String> culturalPreferences; // e.g. ["modest coverage", "no sleeveless"]
+
+    // ── 10. Colour Analysis Results ───────────────────────────────────────────
+    private String colourSeason;              // "Spring" | "Summer" | "Autumn" | "Winter"
+    private Map<String, List<String>> colourPalette; // e.g. {"tops": ["#C4622D", ...], ...}
 }

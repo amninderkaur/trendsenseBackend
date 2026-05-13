@@ -24,4 +24,5 @@ public class WardrobeItem {
     private Date uploadDate;
     private String tag;
     private List<String> cropUrls;
+    private int wearCount = 0;
 }

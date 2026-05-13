@@ -19,6 +19,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -158,6 +160,49 @@ public class WardrobeController {
     }
     
    
+    /** PATCH /api/v1/wardrobe/{itemId}/worn — increment wear count */
+    @PatchMapping("/{itemId}/worn")
+    public ResponseEntity<?> markWorn(
+            @AuthenticationPrincipal User user,
+            @PathVariable String itemId) {
+
+        return wardrobeRepository.findById(itemId)
+                .filter(item -> item.getUserId().equals(user.getId()))
+                .map(item -> {
+                    item.setWearCount(item.getWearCount() + 1);
+                    WardrobeItem saved = wardrobeRepository.save(item);
+                    return ResponseEntity.ok(Map.of(
+                            "itemId", saved.getId(),
+                            "name", saved.getTag() != null ? saved.getTag() : "unknown",
+                            "wearCount", saved.getWearCount()
+                    ));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /** GET /api/v1/wardrobe/usage — wardrobe sorted by wear count ascending */
+    @GetMapping("/usage")
+    public ResponseEntity<Map<String, Object>> getUsage(@AuthenticationPrincipal User user) {
+        List<WardrobeItem> items = wardrobeRepository.findByUserIdOrderByWearCountAsc(user.getId());
+
+        List<Map<String, Object>> leastWorn = items.stream()
+                .map(item -> Map.<String, Object>of(
+                        "itemId", item.getId(),
+                        "name", item.getTag() != null ? item.getTag() : "unknown",
+                        "wearCount", item.getWearCount(),
+                        "category", item.getTag() != null ? item.getTag() : "unknown"
+                ))
+                .collect(Collectors.toList());
+
+        long unwornCount = items.stream().filter(i -> i.getWearCount() == 0).count();
+
+        return ResponseEntity.ok(Map.of(
+                "leastWorn", leastWorn,
+                "totalItems", items.size(),
+                "unwornCount", unwornCount
+        ));
+    }
+
     private String saveImage(MultipartFile file, String userId) throws IOException {
         // Create upload directory if it doesn't exist
         Path uploadDir = Paths.get(uploadPath);

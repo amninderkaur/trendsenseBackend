@@ -11,7 +11,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import capstoneBackend.ca.sheridancollege.beans.ClothingItem;
 import capstoneBackend.ca.sheridancollege.beans.OutfitSuggestionResponse;
+import capstoneBackend.ca.sheridancollege.beans.UserProfile;
 import capstoneBackend.ca.sheridancollege.beans.repositories.ClothingRepository;
+import capstoneBackend.ca.sheridancollege.beans.repositories.UserProfileRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,6 +25,7 @@ public class OutfitService {
     private final ClothingRepository clothingRepository;
     private final GeminiService geminiService;
     private final WeatherService weatherService;
+    private final UserProfileRepository userProfileRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -47,6 +50,25 @@ public class OutfitService {
                     .build();
         }
 
+        // Step 2b: Get user preferences
+        String preferencesLine = "";
+        UserProfile profile = userProfileRepository.findByUserId(userId).orElse(null);
+        if (profile != null) {
+            StringBuilder pref = new StringBuilder();
+            if (profile.getGenderAesthetic() != null) pref.append(profile.getGenderAesthetic()).append(" styling");
+            if (profile.getModestyLevel() != null) {
+                if (pref.length() > 0) pref.append(", ");
+                pref.append(profile.getModestyLevel()).append(" modesty level");
+            }
+            if (profile.getCulturalPreferences() != null && !profile.getCulturalPreferences().isEmpty()) {
+                if (pref.length() > 0) pref.append(", and has the following cultural preferences: ");
+                pref.append(String.join(", ", profile.getCulturalPreferences()));
+            }
+            if (pref.length() > 0) {
+                preferencesLine = "The user prefers " + pref + ". All outfit suggestions must respect these preferences.\n";
+            }
+        }
+
         // Step 3: Build Gemini outfit selection prompt
         String itemsList = wardrobe.stream()
                 .map(item -> String.format(
@@ -64,12 +86,13 @@ public class OutfitService {
             "The user has these wardrobe items:\n%s\n\n" +
             "Current weather in %s is %.1f°C and %s.\n" +
             "The occasion is %s.\n" +
+            "%s" +
             "Select the best outfit from ONLY these items.\n" +
             "Return ONLY a valid JSON object with these fields:\n" +
             "selectedItemIds (array of item id strings),\n" +
             "reasoning (one sentence explaining why this outfit works for the weather and occasion).\n" +
             "Return ONLY the JSON, no markdown, no extra text.",
-            itemsList, weather.city(), weather.temp(), weather.description(), occasion
+            itemsList, weather.city(), weather.temp(), weather.description(), occasion, preferencesLine
         );
 
         // Step 4: Call Gemini for outfit selection

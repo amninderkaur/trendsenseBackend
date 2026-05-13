@@ -10,4 +10,5 @@ import capstoneBackend.ca.sheridancollege.beans.WardrobeItem;
 @Repository
 public interface WardrobeRepository extends MongoRepository<WardrobeItem, String> {
     List<WardrobeItem> findByUserId(String userId);
+    List<WardrobeItem> findByUserIdOrderByWearCountAsc(String userId);
 }

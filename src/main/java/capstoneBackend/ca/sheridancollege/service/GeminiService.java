@@ -92,6 +92,46 @@ public class GeminiService {
     }
 
     /**
+     * Sends an image + text prompt to gemini-2.5-flash and returns the raw text response.
+     * Use this when Gemini needs to visually analyse a photo before answering.
+     *
+     * @param base64Image base64-encoded image bytes (no "data:..." prefix)
+     * @param mimeType    e.g. "image/jpeg"
+     * @param prompt      the text instruction to accompany the image
+     * @return raw text from Gemini, or null on failure
+     */
+    public String sendImagePrompt(String base64Image, String mimeType, String prompt) {
+        Map<String, Object> requestBody = Map.of(
+            "contents", List.of(Map.of("parts", List.of(
+                Map.of("inlineData", Map.of("mimeType", mimeType, "data", base64Image)),
+                Map.of("text", prompt)
+            )))
+        );
+
+        try {
+            Map<?, ?> response = geminiClient.post()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/models/gemini-2.5-flash:generateContent")
+                            .queryParam("key", apiKey)
+                            .build())
+                    .header("Content-Type", "application/json")
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            return extractText(response);
+
+        } catch (WebClientResponseException e) {
+            log.error("Gemini image prompt call failed: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return null;
+        } catch (Exception e) {
+            log.error("Unexpected error during Gemini image prompt call", e);
+            return null;
+        }
+    }
+
+    /**
      * Sends a plain text prompt to gemini-2.5-flash and returns the text response.
      *
      * @param prompt the full prompt string
