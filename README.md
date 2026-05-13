@@ -1,0 +1,440 @@
+# FashionApp — Backend API
+
+**Stack:** Spring Boot · MongoDB · JWT Authentication · Google Gemini AI · OpenWeather API  
+**Package:** `capstoneBackend.ca.sheridancollege`
+
+---
+
+## Base URLs
+
+| Environment | URL |
+|-------------|-----|
+| Local | `http://localhost:8080` |
+| Production (Azure) | `https://fashionapp-backend-gtatg0hjbwh4c2dk.canadacentral-01.azurewebsites.net` |
+
+---
+
+## Authentication
+
+All endpoints except **Register** and **Login** require a JWT Bearer token:
+
+```
+Authorization: Bearer <token>
+```
+
+Get the token from the login response and include it in every request header.
+
+---
+
+## Endpoints
+
+### Auth
+
+#### Register
+```
+POST /api/v1/auth/register
+```
+**Body:**
+```json
+{
+  "firstName": "Jane",
+  "lastName": "Doe",
+  "email": "jane@example.com",
+  "password": "password123"
+}
+```
+**Response:**
+```json
+{ "token": "eyJhbGci..." }
+```
+
+---
+
+#### Login
+```
+POST /api/v1/auth/login
+```
+**Body:**
+```json
+{
+  "email": "jane@example.com",
+  "password": "password123"
+}
+```
+**Response:**
+```json
+{ "token": "eyJhbGci..." }
+```
+
+---
+
+### Profile
+
+#### Save / Update Onboarding Profile
+```
+POST /api/profile
+```
+**Body:**
+```json
+{
+  "displayName": "Jane",
+  "ageGroup": "18–24",
+  "gender": "Women",
+  "styles": ["Casual", "Streetwear"],
+  "favoriteColors": ["Black", "White"],
+  "colorsToAvoid": ["Neon Yellow"],
+  "shoppingFor": ["Tops", "Bottoms", "Shoes"],
+  "preferredFit": ["Oversized", "Regular"],
+  "preferredFabrics": ["Cotton", "Denim"],
+  "topSize": "S",
+  "bottomSize": "28",
+  "shoeSize": "7",
+  "fitConcerns": ["Petite"],
+  "dressFor": ["College/School", "Casual outings"],
+  "climate": "Mixed seasons",
+  "budgetPerItem": "$25–$50",
+  "shoppingFrequency": "Monthly",
+  "shoppingPriorities": ["Price", "Quality"],
+  "favoriteBrands": ["Zara", "H&M"],
+  "brandsToAvoid": [],
+  "recommendationBases": ["Current weather", "AI outfit generation"],
+  "styleNotifications": true
+}
+```
+**Response:** Saved `UserProfile` document with `id` and `userId`
+
+---
+
+#### Get Profile
+```
+GET /api/profile
+```
+**Response:** Saved `UserProfile` document
+
+---
+
+#### Update Style Preferences
+```
+PATCH /api/profile/preferences
+```
+**Body:**
+```json
+{
+  "genderAesthetic": "feminine",
+  "modestyLevel": "high",
+  "culturalPreferences": ["modest coverage", "no sleeveless", "full length bottoms"]
+}
+```
+
+Valid values:
+- `genderAesthetic`: `"masculine"` | `"feminine"` | `"androgynous"` | `"mixed"`
+- `modestyLevel`: `"low"` | `"medium"` | `"high"` | `"full"`
+- `culturalPreferences`: free array of strings
+
+**Response:**
+```json
+{
+  "message": "Preferences updated successfully",
+  "genderAesthetic": "feminine",
+  "modestyLevel": "high",
+  "culturalPreferences": ["modest coverage", "no sleeveless", "full length bottoms"]
+}
+```
+
+---
+
+### Wardrobe
+
+#### Get All Wardrobe Items
+```
+GET /api/v1/wardrobe
+```
+**Response:** Array of `WardrobeItem` documents
+
+---
+
+#### Get Single Wardrobe Item
+```
+GET /api/v1/wardrobe/{id}
+```
+**Response:** Single `WardrobeItem` document
+
+---
+
+#### Upload Clothing Item
+```
+POST /api/v1/wardrobe/upload
+Content-Type: multipart/form-data
+```
+| Field | Type | Description |
+|-------|------|-------------|
+| `file` | File | JPEG, PNG, or WebP image of the clothing item |
+
+**Response:**
+```json
+{
+  "message": "Clothing item added successfully",
+  "item": { "id": "...", "tag": "shirt", "cropUrls": ["..."] },
+  "detections": [ { "class": "shirt", "confidence": 0.97 } ]
+}
+```
+
+---
+
+#### Mark Item as Worn
+```
+PATCH /api/v1/wardrobe/{itemId}/worn
+```
+No body needed. Increments the item's wear count by 1. Call this when a user accepts an outfit suggestion.
+
+**Response:**
+```json
+{
+  "itemId": "abc123",
+  "name": "White shirt",
+  "wearCount": 4
+}
+```
+
+---
+
+#### Get Wardrobe Usage Stats
+```
+GET /api/v1/wardrobe/usage
+```
+Returns the user's wardrobe sorted by least worn first, useful for surfacing forgotten items.
+
+**Response:**
+```json
+{
+  "leastWorn": [
+    { "itemId": "xyz789", "name": "Red blazer", "wearCount": 0, "category": "outerwear" },
+    { "itemId": "abc123", "name": "Floral dress", "wearCount": 1, "category": "dress" }
+  ],
+  "totalItems": 24,
+  "unwornCount": 8
+}
+```
+
+---
+
+### Outfit Suggestion
+
+#### Get AI Outfit Suggestion
+```
+POST /api/outfit/suggest
+```
+Fetches live weather for the city, selects the best outfit from the user's wardrobe using Gemini AI, and respects the user's saved style preferences.
+
+**Body:**
+```json
+{
+  "occasion": "work",
+  "city": "Toronto"
+}
+```
+**Response:**
+```json
+{
+  "selectedItems": [
+    {
+      "itemId": "abc123",
+      "type": "shirt",
+      "color": "white",
+      "imageBase64": "..."
+    }
+  ],
+  "reasoning": "This outfit works well for a work occasion in cool weather.",
+  "weatherSummary": "12.0°C, light rain in Toronto"
+}
+```
+
+---
+
+### Colour Analysis
+
+#### Analyse Colour Season from Photo
+```
+POST /api/colour/analyze
+Content-Type: multipart/form-data
+```
+| Field | Type | Description |
+|-------|------|-------------|
+| `file` | File | JPEG, PNG, or WebP photo of the person's face |
+
+Gemini Vision reads the person's skin tone, eye colour, and hair colour directly from the photo. Determines their colour season and returns a recommended hex colour palette. Result is automatically saved to the user's profile.
+
+**Response:**
+```json
+{
+  "season": "Autumn",
+  "description": "Warm olive skin with dark brown eyes detected. Earthy tones complement your features best.",
+  "palette": {
+    "tops": ["#C4622D", "#8B5E3C", "#D4A853"],
+    "bottoms": ["#5C4033", "#7A6652", "#3B2F2F"],
+    "outerwear": ["#8B4513", "#6B4226", "#A0522D"],
+    "shoes": ["#5C3317", "#8B6914", "#704214"]
+  }
+}
+```
+
+---
+
+### Trip Packing
+
+#### Get AI Packing Suggestion
+```
+POST /api/packing/suggest
+```
+Fetches live weather for the destination and generates a personalised packing list using Gemini AI, taking into account the user's style preferences and colour season.
+
+**Body:**
+```json
+{
+  "destination": "Paris, France",
+  "tripLengthDays": 7,
+  "activities": ["sightseeing", "fine dining", "museum visits"]
+}
+```
+**Response:**
+```json
+{
+  "destination": "Paris, France",
+  "weatherSummary": "14.0°C, overcast clouds in Paris",
+  "packingList": {
+    "tops": ["Light knit sweater x3", "Long sleeve shirt x2", "Blouse x2"],
+    "bottoms": ["Tailored trousers x2", "Dark jeans x1", "Midi skirt x1"],
+    "outerwear": ["Trench coat x1", "Light rain jacket x1"],
+    "shoes": ["Comfortable walking flats x1", "Ankle boots x1"],
+    "accessories": ["Scarf x1", "Compact umbrella x1"],
+    "extras": ["Adapter plug", "Comfortable bag for day trips"]
+  },
+  "tips": "Pack neutral colours that mix and match easily for a 7-day trip."
+}
+```
+
+---
+
+### Mood Board
+
+#### Save a Mood Board
+```
+POST /api/moodboard
+```
+**Body:**
+```json
+{
+  "mood": "minimal",
+  "savedOutfits": [
+    {
+      "itemIds": ["itemId1", "itemId2"],
+      "description": "Clean white shirt with beige trousers"
+    }
+  ]
+}
+```
+**Response:**
+```json
+{
+  "id": "moodboardId123",
+  "mood": "minimal",
+  "savedOutfits": [ { "itemIds": ["itemId1", "itemId2"], "description": "..." } ],
+  "createdAt": "2025-05-13T10:00:00Z"
+}
+```
+
+---
+
+#### Get All Mood Boards
+```
+GET /api/moodboard
+```
+**Response:** Array of all saved mood boards for the authenticated user
+
+---
+
+#### Match Wardrobe to a Mood
+```
+POST /api/moodboard/match
+```
+Gemini picks 2–3 outfit combinations from the user's actual wardrobe items that match the selected mood, occasion, and weather. User style preferences are also applied.
+
+**Body:**
+```json
+{
+  "mood": "minimal",
+  "occasion": "work",
+  "weather": "cool"
+}
+```
+**Response:**
+```json
+{
+  "mood": "minimal",
+  "outfitSuggestions": [
+    {
+      "description": "Clean monochrome look",
+      "items": [
+        { "itemId": "abc123", "name": "White oversized shirt", "category": "top" },
+        { "itemId": "def456", "name": "Black straight leg trousers", "category": "bottom" }
+      ]
+    },
+    {
+      "description": "Neutral tones with clean lines",
+      "items": [
+        { "itemId": "ghi789", "name": "Beige knit", "category": "top" },
+        { "itemId": "jkl012", "name": "Cream wide leg pants", "category": "bottom" }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### AI Chat
+
+#### Fashion Chatbot
+```
+POST /api/chat
+```
+Multi-turn Gemini-powered fashion assistant. The server is stateless — send the full conversation history with each request so context is maintained.
+
+**First message:**
+```json
+{
+  "message": "What should I wear to a casual brunch?",
+  "history": []
+}
+```
+
+**Follow-up message:**
+```json
+{
+  "message": "What shoes go with that?",
+  "history": [
+    { "role": "user", "text": "What should I wear to a casual brunch?" },
+    { "role": "model", "text": "I'd suggest a linen blouse with straight-leg jeans..." }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "reply": "White sneakers or loafers would work perfectly with that look..."
+}
+```
+
+---
+
+## Error Reference
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Bad request — missing or invalid fields |
+| `401` | Unauthorized — missing or invalid JWT token |
+| `403` | Forbidden — valid token but accessing another user's resource |
+| `404` | Resource not found |
+| `405` | Wrong HTTP method (e.g. GET instead of POST) |
+| `500` | Server error — check Azure logs |
