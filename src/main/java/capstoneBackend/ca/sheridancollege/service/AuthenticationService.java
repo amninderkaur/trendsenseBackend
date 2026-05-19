@@ -21,10 +21,10 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final OtpService otpService;
 
     // Register a new user
     public AuthenticationResponse register(AuthenticationRequest request) {
-        // Check if user already exists
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email already registered");
         }
@@ -35,14 +35,13 @@ public class AuthenticationService {
                 .role(Role.USER)
                 .build();
 
-
         userRepository.save(user);
 
         String jwtToken = jwtService.generateToken(user);
         return AuthenticationResponse.builder().token(jwtToken).build();
     }
 
-    // Authenticate existing user
+    // Authenticate existing user — verifies password then sends OTP
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -51,7 +50,22 @@ public class AuthenticationService {
                 )
         );
 
-        User user = userRepository.findByEmail(request.getEmail())
+        userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        String deliveryMethod = request.getDeliveryMethod() != null ? request.getDeliveryMethod() : "email";
+        otpService.generateAndSendOtp(request.getEmail(), deliveryMethod);
+
+        return AuthenticationResponse.builder()
+                .message("OTP sent")
+                .requiresOtp(true)
+                .deliveryMethod(deliveryMethod)
+                .build();
+    }
+
+    // Called after OTP is verified — returns JWT
+    public AuthenticationResponse generateTokenForVerifiedUser(String email) {
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         String jwtToken = jwtService.generateToken(user);
