@@ -50,8 +50,17 @@ public class AuthenticationService {
                 )
         );
 
-        userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (user.isHasLoggedInBefore()) {
+            String jwtToken = jwtService.generateToken(user);
+            return AuthenticationResponse.builder()
+                    .token(jwtToken)
+                    .userId(user.getId())
+                    .requiresOtp(false)
+                    .build();
+        }
 
         String deliveryMethod = request.getDeliveryMethod() != null ? request.getDeliveryMethod() : "email";
         otpService.generateAndSendOtp(request.getEmail(), deliveryMethod);
@@ -67,6 +76,9 @@ public class AuthenticationService {
     public AuthenticationResponse generateTokenForVerifiedUser(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        user.setHasLoggedInBefore(true);
+        userRepository.save(user);
 
         String jwtToken = jwtService.generateToken(user);
         return AuthenticationResponse.builder().token(jwtToken).userId(user.getId()).build();
