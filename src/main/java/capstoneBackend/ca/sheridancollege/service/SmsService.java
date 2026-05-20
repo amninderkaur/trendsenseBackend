@@ -33,4 +33,20 @@ public class SmsService {
                 "Your Trend Sense code is: " + otp + ". Expires in 10 minutes."
         ).create();
     }
+
+    public void sendReviewConfirmationSms(String toPhoneNumber, long caseNumber) {
+        Message.creator(
+                new PhoneNumber(toPhoneNumber),
+                new PhoneNumber(fromPhoneNumber),
+                "Trend Sense: Your review has been received. Case #" + caseNumber + ". We'll get back to you soon."
+        ).create();
+    }
+
+    public void sendAdminReplySms(String toPhoneNumber, long caseNumber, String reply) {
+        Message.creator(
+                new PhoneNumber(toPhoneNumber),
+                new PhoneNumber(fromPhoneNumber),
+                "Trend Sense (Case #" + caseNumber + "): " + reply
+        ).create();
+    }
 }

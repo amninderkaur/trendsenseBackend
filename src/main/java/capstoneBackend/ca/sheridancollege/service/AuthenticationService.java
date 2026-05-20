@@ -34,6 +34,7 @@ public class AuthenticationService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.USER)
                 .phoneNumber(request.getPhoneNumber())
+                .deliveryMethod(request.getDeliveryMethod() != null ? request.getDeliveryMethod() : "email")
                 .build();
 
         userRepository.save(user);
@@ -63,7 +64,7 @@ public class AuthenticationService {
                     .build();
         }
 
-        String deliveryMethod = request.getDeliveryMethod() != null ? request.getDeliveryMethod() : "email";
+        String deliveryMethod = user.getDeliveryMethod() != null ? user.getDeliveryMethod() : "email";
         otpService.generateAndSendOtp(request.getEmail(), deliveryMethod);
 
         return AuthenticationResponse.builder()
