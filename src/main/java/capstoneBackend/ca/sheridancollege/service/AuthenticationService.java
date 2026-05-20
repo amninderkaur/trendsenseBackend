@@ -38,8 +38,7 @@ public class AuthenticationService {
 
         userRepository.save(user);
 
-        String jwtToken = jwtService.generateToken(user);
-        return AuthenticationResponse.builder().token(jwtToken).build();
+        return AuthenticationResponse.builder().message("Registration successful. Please log in.").build();
     }
 
     // Authenticate existing user — verifies password then sends OTP

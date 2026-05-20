@@ -35,11 +35,10 @@ public class AuthenticationServiceTest {
         when(userRepository.findByEmail("new@test.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("pass123")).thenReturn("encodedPass");
         when(userRepository.save(any())).thenReturn(new User());
-        when(jwtService.generateToken(any())).thenReturn("fake-jwt-token");
 
         AuthenticationResponse response = authenticationService.register(request);
 
-        assertEquals("fake-jwt-token", response.getToken());
+        assertEquals("Registration successful. Please log in.", response.getMessage());
     }
 
     @Test

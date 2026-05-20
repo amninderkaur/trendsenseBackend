@@ -27,13 +27,13 @@ public class AuthenticationControllerTest {
     @Test
     void register_ShouldReturn200_WithToken() throws Exception {
         when(authenticationService.register(any()))
-                .thenReturn(AuthenticationResponse.builder().token("test-token").build());
+                .thenReturn(AuthenticationResponse.builder().message("Registration successful. Please log in.").build());
 
         mockMvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"test@test.com\",\"password\":\"pass123\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("test-token"));
+                .andExpect(jsonPath("$.message").value("Registration successful. Please log in."));
     }
 
     @Test
