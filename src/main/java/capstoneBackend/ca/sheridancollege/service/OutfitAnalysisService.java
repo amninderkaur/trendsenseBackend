@@ -27,7 +27,7 @@ public class OutfitAnalysisService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public OutfitAnalysisResponse analyzeOutfit(String userId, MultipartFile image, String city) {
+    public OutfitAnalysisResponse analyzeOutfit(String userId, MultipartFile image, String city, String occasion) {
 
         // Step 1: Fetch weather
         WeatherService.WeatherInfo weather = weatherService.getWeather(city);
@@ -62,8 +62,13 @@ public class OutfitAnalysisService {
         }
 
         // Step 4: Build prompt and call Gemini with the image
+        String occasionContext = (occasion != null && !occasion.isBlank())
+                ? "The user is planning to wear this for: " + occasion + ". "
+                : "";
+
         String prompt = String.format(
                 "Analyze this outfit. The person is in %s. Current weather: %s, %.1f°C. " +
+                "%s" +
                 "User preferences: %s aesthetic, %s modesty, cultural preferences: %s. " +
                 "Their colour season is %s. " +
                 "Evaluate: 1) What occasion is this outfit suitable for? " +
@@ -76,6 +81,7 @@ public class OutfitAnalysisService {
                 "whatWorksWell (array), suggestions (array), overallVerdict, currentWeather. " +
                 "No markdown, no extra text.",
                 weather.city(), weather.description(), weather.temp(),
+                occasionContext,
                 genderAesthetic, modestyLevel, culturalPreferences, season
         );
 

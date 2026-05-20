@@ -27,14 +27,16 @@ public class OutfitAnalysisController {
     public ResponseEntity<OutfitAnalysisResponse> analyze(
             @AuthenticationPrincipal User user,
             @RequestParam("image") MultipartFile image,
-            @RequestParam("city") String city) {
+            @RequestParam("city") String city,
+            @RequestParam(value = "occasion", required = false) String occasion) {
 
-        log.info("Outfit analysis requested by user {} for city '{}'", user.getId(), city);
+        log.info("Outfit analysis requested by user {} for city '{}', occasion '{}'", user.getId(), city, occasion);
 
         OutfitAnalysisResponse response = outfitAnalysisService.analyzeOutfit(
                 user.getId(),
                 image,
-                city
+                city,
+                occasion
         );
 
         return ResponseEntity.ok(response);
