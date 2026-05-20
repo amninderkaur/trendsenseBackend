@@ -62,5 +62,6 @@ public class AuthenticationServiceTest {
         AuthenticationResponse response = authenticationService.authenticate(request);
 
         assertEquals("jwt-token", response.getToken());
+        assertEquals("USER", response.getRole());
     }
 }

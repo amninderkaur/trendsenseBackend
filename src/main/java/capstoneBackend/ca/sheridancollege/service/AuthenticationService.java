@@ -58,6 +58,7 @@ public class AuthenticationService {
             return AuthenticationResponse.builder()
                     .token(jwtToken)
                     .userId(user.getId())
+                    .role(user.getRole().name())
                     .requiresOtp(false)
                     .build();
         }
@@ -81,6 +82,6 @@ public class AuthenticationService {
         userRepository.save(user);
 
         String jwtToken = jwtService.generateToken(user);
-        return AuthenticationResponse.builder().token(jwtToken).userId(user.getId()).build();
+        return AuthenticationResponse.builder().token(jwtToken).userId(user.getId()).role(user.getRole().name()).build();
     }
 }
