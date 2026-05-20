@@ -30,7 +30,7 @@ cd ca.sheridancolleg
 
 ### 2. Get Your API Keys
 
-You need 3 API keys before running the app:
+You need the following before running the app:
 
 | Key | Where to get it |
 |-----|----------------|
@@ -48,8 +48,6 @@ You need 3 API keys before running the app:
 ### 3. Set Environment Variables
 
 Create a file called `.env` or set these as environment variables on your machine. **Never commit these to Git.**
-
-The app reads the following variables:
 
 ```
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/fashionapp
@@ -106,7 +104,6 @@ The server starts on **http://localhost:8080**
 
 ### 6. Verify It's Running
 
-Open your browser or Postman and hit:
 ```
 GET http://localhost:8080/api/profile
 ```
@@ -118,8 +115,9 @@ You should get a `401 Unauthorized` — that means the server is up and JWT auth
 
 - Max file upload size is **10MB** (configured in `application.properties`)
 - Uploaded wardrobe images are saved locally to `uploads/wardrobe/`
-- The `AI_SERVICE_URL` points to the Python FastAPI clothing detection service — if you don't have it running locally, wardrobe uploads will fail but all other endpoints will still work
+- The `AI_SERVICE_URL` points to the Python FastAPI clothing detection service — if you don't have it running locally, wardrobe uploads will fail but all other endpoints still work
 - `JWT_SECRET` has a default value in `application.properties` so you don't need to set it locally
+- OTP codes expire after **10 minutes** — use `/resend-otp` to get a fresh one
 
 ---
 
@@ -140,7 +138,7 @@ All endpoints except **Register** and **Login** require a JWT Bearer token:
 Authorization: Bearer <token>
 ```
 
-Get the token from the login response and include it in every request header.
+Get the token from the login or verify-otp response and include it in every request header.
 
 ---
 
@@ -161,8 +159,8 @@ POST /api/v1/auth/register
   "deliveryMethod": "email"
 }
 ```
-> `phoneNumber` is optional. Required only if `deliveryMethod` is `"sms"`. Must be in E.164 format e.g. `+16471234567`.  
-> `deliveryMethod` is `"email"` (default) or `"sms"`. This is saved to the user and used for all future OTP and review notifications.
+> `phoneNumber` is optional. Required only if `deliveryMethod` is `"sms"`. Must be in E.164 format.  
+> `deliveryMethod` is `"email"` (default) or `"sms"`.
 
 **Response:**
 ```json
@@ -183,7 +181,6 @@ POST /api/v1/auth/authenticate
   "deliveryMethod": "email"
 }
 ```
-> `deliveryMethod` is `"email"` (default) or `"sms"`. Only applies on first login.
 
 **Response — first login (OTP required):**
 ```json
@@ -210,8 +207,6 @@ POST /api/v1/auth/authenticate
 ```
 POST /api/v1/auth/verify-otp
 ```
-Verifies the OTP sent during first login. Returns a JWT token on success.
-
 **Body:**
 ```json
 {
@@ -225,6 +220,25 @@ Verifies the OTP sent during first login. Returns a JWT token on success.
   "token": "eyJhbGci...",
   "userId": "abc123"
 }
+```
+
+---
+
+#### Resend OTP
+```
+POST /api/v1/auth/resend-otp
+```
+Generates and sends a fresh OTP. The previous OTP is immediately invalidated. Use this when the 10-minute window has expired.
+
+**Body:**
+```json
+{
+  "email": "jane@example.com"
+}
+```
+**Response:**
+```json
+{ "message": "A new OTP has been sent" }
 ```
 
 ---
@@ -283,14 +297,12 @@ PATCH /api/profile/preferences
 {
   "genderAesthetic": "feminine",
   "modestyLevel": "high",
-  "culturalPreferences": ["modest coverage", "no sleeveless", "full length bottoms"]
+  "culturalPreferences": ["modest coverage", "no sleeveless"]
 }
 ```
-
 Valid values:
 - `genderAesthetic`: `"masculine"` | `"feminine"` | `"androgynous"` | `"mixed"`
 - `modestyLevel`: `"low"` | `"medium"` | `"high"` | `"full"`
-- `culturalPreferences`: free array of strings
 
 **Response:**
 ```json
@@ -298,7 +310,7 @@ Valid values:
   "message": "Preferences updated successfully",
   "genderAesthetic": "feminine",
   "modestyLevel": "high",
-  "culturalPreferences": ["modest coverage", "no sleeveless", "full length bottoms"]
+  "culturalPreferences": ["modest coverage", "no sleeveless"]
 }
 ```
 
@@ -342,11 +354,21 @@ Content-Type: multipart/form-data
 
 ---
 
+#### Delete a Clothing Item
+```
+DELETE /api/v1/wardrobe/{id}
+```
+Permanently removes the item from the user's wardrobe. Returns `404` if not found or belongs to another user.
+
+**Response:** `204 No Content`
+
+---
+
 #### Mark Item as Worn
 ```
 PATCH /api/v1/wardrobe/{itemId}/worn
 ```
-No body needed. Increments the item's wear count by 1. Call this when a user accepts an outfit suggestion.
+No body needed. Increments the item's wear count by 1.
 
 **Response:**
 ```json
@@ -363,14 +385,13 @@ No body needed. Increments the item's wear count by 1. Call this when a user acc
 ```
 GET /api/v1/wardrobe/usage
 ```
-Returns the user's wardrobe sorted by least worn first, useful for surfacing forgotten items.
+Returns the wardrobe sorted by least worn first.
 
 **Response:**
 ```json
 {
   "leastWorn": [
-    { "itemId": "xyz789", "name": "Red blazer", "wearCount": 0, "category": "outerwear" },
-    { "itemId": "abc123", "name": "Floral dress", "wearCount": 1, "category": "dress" }
+    { "itemId": "xyz789", "name": "Red blazer", "wearCount": 0, "category": "outerwear" }
   ],
   "totalItems": 24,
   "unwornCount": 8
@@ -385,7 +406,7 @@ Returns the user's wardrobe sorted by least worn first, useful for surfacing for
 ```
 POST /api/outfit/suggest
 ```
-Fetches live weather for the city, selects the best outfit from the user's wardrobe using Gemini AI, and respects the user's saved style preferences.
+Fetches live weather for the city, selects the best outfit from the user's wardrobe using Gemini AI, and respects saved style preferences.
 
 **Body:**
 ```json
@@ -398,17 +419,52 @@ Fetches live weather for the city, selects the best outfit from the user's wardr
 ```json
 {
   "selectedItems": [
-    {
-      "itemId": "abc123",
-      "type": "shirt",
-      "color": "white",
-      "imageBase64": "..."
-    }
+    { "itemId": "abc123", "type": "shirt", "color": "white", "imageBase64": "..." }
   ],
   "reasoning": "This outfit works well for a work occasion in cool weather.",
   "weatherSummary": "12.0°C, light rain in Toronto"
 }
 ```
+
+---
+
+#### Save Outfit to History
+```
+POST /api/outfit/history
+```
+Only saves outfits the user explicitly likes. Nothing is auto-saved. Send the suggestion response body plus `occasion` and `city`.
+
+**Body:**
+```json
+{
+  "occasion": "work",
+  "city": "Toronto",
+  "weatherSummary": "12.0°C, light rain in Toronto",
+  "reasoning": "Great layered look for the weather.",
+  "selectedItems": [
+    { "itemId": "abc123", "type": "shirt", "color": "white", "imageBase64": "..." }
+  ]
+}
+```
+**Response:** Saved `OutfitHistory` document with `id` and `savedAt`
+
+---
+
+#### Get Saved Outfit History
+```
+GET /api/outfit/history
+```
+Returns all outfits the user has saved, newest first.
+
+**Response:** Array of `OutfitHistory` documents
+
+---
+
+#### Delete a Saved Outfit
+```
+DELETE /api/outfit/history/{id}
+```
+**Response:** `204 No Content`
 
 ---
 
@@ -419,12 +475,12 @@ Fetches live weather for the city, selects the best outfit from the user's wardr
 POST /api/outfit/analyze
 Content-Type: multipart/form-data
 ```
-Uploads a photo of an outfit, fetches live weather for the given city, and uses Gemini Vision to evaluate the outfit against the weather, the user's style preferences, modesty level, cultural preferences, and colour season. Fully stateless — nothing is saved to the database.
+Uploads a photo and uses Gemini Vision to evaluate the outfit against weather, style preferences, modesty, and colour season.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `image` | File | JPEG, PNG, or WebP photo of the outfit |
-| `city` | String | City name for live weather lookup e.g. `"Toronto"` |
+| `city` | String | City name for live weather e.g. `"Toronto"` |
 
 **Response:**
 ```json
@@ -433,15 +489,8 @@ Uploads a photo of an outfit, fetches live weather for the given city, and uses 
   "styleScore": 7,
   "weatherVerdict": "not suitable",
   "weatherReason": "It's 4°C and raining — this outfit will leave you cold",
-  "whatWorksWell": [
-    "The colour palette is cohesive",
-    "The silhouette is flattering for a casual setting"
-  ],
-  "suggestions": [
-    "Add a warm coat or trench over the top",
-    "Swap the open-toe sandals for ankle boots",
-    "A scarf would add warmth without disrupting the look"
-  ],
+  "whatWorksWell": ["The colour palette is cohesive"],
+  "suggestions": ["Add a warm coat", "Swap sandals for ankle boots"],
   "overallVerdict": "Great casual look, but needs layers for today's weather.",
   "currentWeather": "Light rain, 4°C, Toronto"
 }
@@ -460,13 +509,13 @@ Content-Type: multipart/form-data
 |-------|------|-------------|
 | `file` | File | JPEG, PNG, or WebP photo of the person's face |
 
-Gemini Vision reads the person's skin tone, eye colour, and hair colour directly from the photo. Determines their colour season and returns a recommended hex colour palette. Result is automatically saved to the user's profile.
+Result is automatically saved to the user's profile.
 
 **Response:**
 ```json
 {
   "season": "Autumn",
-  "description": "Warm olive skin with dark brown eyes detected. Earthy tones complement your features best.",
+  "description": "Warm olive skin with dark brown eyes detected.",
   "palette": {
     "tops": ["#C4622D", "#8B5E3C", "#D4A853"],
     "bottoms": ["#5C4033", "#7A6652", "#3B2F2F"],
@@ -484,8 +533,6 @@ Gemini Vision reads the person's skin tone, eye colour, and hair colour directly
 ```
 POST /api/packing/suggest
 ```
-Fetches live weather for the destination and generates a personalised packing list using Gemini AI, taking into account the user's style preferences and colour season.
-
 **Body:**
 ```json
 {
@@ -500,14 +547,14 @@ Fetches live weather for the destination and generates a personalised packing li
   "destination": "Paris, France",
   "weatherSummary": "14.0°C, overcast clouds in Paris",
   "packingList": {
-    "tops": ["Light knit sweater x3", "Long sleeve shirt x2", "Blouse x2"],
-    "bottoms": ["Tailored trousers x2", "Dark jeans x1", "Midi skirt x1"],
-    "outerwear": ["Trench coat x1", "Light rain jacket x1"],
+    "tops": ["Light knit sweater x3", "Long sleeve shirt x2"],
+    "bottoms": ["Tailored trousers x2", "Dark jeans x1"],
+    "outerwear": ["Trench coat x1"],
     "shoes": ["Comfortable walking flats x1", "Ankle boots x1"],
     "accessories": ["Scarf x1", "Compact umbrella x1"],
-    "extras": ["Adapter plug", "Comfortable bag for day trips"]
+    "extras": ["Adapter plug"]
   },
-  "tips": "Pack neutral colours that mix and match easily for a 7-day trip."
+  "tips": "Pack neutral colours that mix and match easily."
 }
 ```
 
@@ -524,20 +571,8 @@ POST /api/moodboard
 {
   "mood": "minimal",
   "savedOutfits": [
-    {
-      "itemIds": ["itemId1", "itemId2"],
-      "description": "Clean white shirt with beige trousers"
-    }
+    { "itemIds": ["itemId1", "itemId2"], "description": "Clean white shirt with beige trousers" }
   ]
-}
-```
-**Response:**
-```json
-{
-  "id": "moodboardId123",
-  "mood": "minimal",
-  "savedOutfits": [ { "itemIds": ["itemId1", "itemId2"], "description": "..." } ],
-  "createdAt": "2025-05-13T10:00:00Z"
 }
 ```
 
@@ -547,7 +582,6 @@ POST /api/moodboard
 ```
 GET /api/moodboard
 ```
-**Response:** Array of all saved mood boards for the authenticated user
 
 ---
 
@@ -555,36 +589,12 @@ GET /api/moodboard
 ```
 POST /api/moodboard/match
 ```
-Gemini picks 2–3 outfit combinations from the user's actual wardrobe items that match the selected mood, occasion, and weather. User style preferences are also applied.
-
 **Body:**
 ```json
 {
   "mood": "minimal",
   "occasion": "work",
   "weather": "cool"
-}
-```
-**Response:**
-```json
-{
-  "mood": "minimal",
-  "outfitSuggestions": [
-    {
-      "description": "Clean monochrome look",
-      "items": [
-        { "itemId": "abc123", "name": "White oversized shirt", "category": "top" },
-        { "itemId": "def456", "name": "Black straight leg trousers", "category": "bottom" }
-      ]
-    },
-    {
-      "description": "Neutral tones with clean lines",
-      "items": [
-        { "itemId": "ghi789", "name": "Beige knit", "category": "top" },
-        { "itemId": "jkl012", "name": "Cream wide leg pants", "category": "bottom" }
-      ]
-    }
-  ]
 }
 ```
 
@@ -596,7 +606,7 @@ Gemini picks 2–3 outfit combinations from the user's actual wardrobe items tha
 ```
 POST /api/shopping/suggest
 ```
-Uses Gemini AI with **Google Search grounding** to find real products available in Canada that fill gaps in the user's wardrobe. Personalises results using the user's colour season, style preferences, modesty level, and cultural preferences. Returns real product links sourced from live web search.
+Uses Gemini AI with Google Search grounding to find real products in Canada. Automatically uses all profile preferences — styles, colours, fit, fabrics, brands, modesty, budget per item, and more.
 
 **Body:**
 ```json
@@ -612,12 +622,11 @@ Uses Gemini AI with **Google Search grounding** to find real products available 
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `destination` | String | Country/region for product availability |
 | `budget` | Number | Total budget for all suggestions |
-| `currency` | String | Currency code e.g. `"CAD"`, `"USD"` |
-| `location` | String | User's city for nearby store suggestions |
-| `focusCategory` | String | Optional — target a specific gap e.g. `"shoes"`. If empty, gaps are auto-detected from wardrobe |
-| `preferOnline` | Boolean | `true` = online stores only, `false` = include physical stores |
+| `currency` | String | e.g. `"CAD"`, `"USD"` |
+| `location` | String | City for nearby store suggestions |
+| `focusCategory` | String | Optional — target a specific category. If empty, gaps are auto-detected from wardrobe |
+| `preferOnline` | Boolean | `true` = online only, `false` = include physical stores |
 
 **Response:**
 ```json
@@ -630,7 +639,7 @@ Uses Gemini AI with **Google Search grounding** to find real products available 
     {
       "item": "Camel wool trench coat",
       "category": "outerwear",
-      "whyItFits": "Earthy camel tone matches your Autumn palette perfectly",
+      "whyItFits": "Earthy camel tone matches your Autumn palette",
       "estimatedPrice": "$120 CAD",
       "storeName": "Zara Canada",
       "storeType": "Online + In-store",
@@ -643,15 +652,56 @@ Uses Gemini AI with **Google Search grounding** to find real products available 
 
 ---
 
+#### Save a Shopping Item
+```
+POST /api/shopping/saved
+```
+Save a suggestion the user likes (triggered by the Save button on each result).
+
+**Body:** Any suggestion object from the shopping response:
+```json
+{
+  "item": "Camel wool trench coat",
+  "category": "outerwear",
+  "whyItFits": "Earthy camel tone matches your Autumn palette",
+  "estimatedPrice": "$120 CAD",
+  "storeName": "Zara Canada",
+  "storeType": "Online + In-store",
+  "link": "https://www.zara.com/ca/...",
+  "nearbyLocation": "Eaton Centre, Toronto"
+}
+```
+**Response:** Saved `SavedShoppingItem` document with `id` and `savedAt`
+
+---
+
+#### Get All Saved Shopping Items
+```
+GET /api/shopping/saved
+```
+Returns all saved items, newest first.
+
+**Response:** Array of `SavedShoppingItem` documents
+
+---
+
+#### Delete a Saved Shopping Item
+```
+DELETE /api/shopping/saved/{id}
+```
+**Response:** `204 No Content`
+
+---
+
 ### AI Chat
 
 #### Fashion Chatbot
 ```
 POST /api/chat
 ```
-Multi-turn Gemini-powered fashion assistant. The server is stateless — send the full conversation history with each request so context is maintained.
+Multi-turn Gemini-powered fashion assistant. Send the full conversation history with each request.
 
-**First message:**
+**Body:**
 ```json
 {
   "message": "What should I wear to a casual brunch?",
@@ -659,7 +709,7 @@ Multi-turn Gemini-powered fashion assistant. The server is stateless — send th
 }
 ```
 
-**Follow-up message:**
+**Follow-up:**
 ```json
 {
   "message": "What shoes go with that?",
@@ -672,9 +722,7 @@ Multi-turn Gemini-powered fashion assistant. The server is stateless — send th
 
 **Response:**
 ```json
-{
-  "reply": "White sneakers or loafers would work perfectly with that look..."
-}
+{ "reply": "White sneakers or loafers would work perfectly..." }
 ```
 
 ---
@@ -685,8 +733,6 @@ Multi-turn Gemini-powered fashion assistant. The server is stateless — send th
 ```
 POST /api/v1/reviews
 ```
-Any authenticated user can submit a review. A confirmation email with the case number is sent to the user automatically.
-
 **Body:**
 ```json
 {
@@ -694,19 +740,7 @@ Any authenticated user can submit a review. A confirmation email with the case n
   "rating": 5
 }
 ```
-**Response:**
-```json
-{
-  "id": "...",
-  "caseNumber": 1,
-  "userId": "abc123",
-  "email": "jane@example.com",
-  "message": "Love the outfit suggestions!",
-  "rating": 5,
-  "adminReply": null,
-  "createdAt": "2025-05-20T10:00:00Z"
-}
-```
+A confirmation email with the case number is sent to the user automatically.
 
 ---
 
@@ -714,9 +748,6 @@ Any authenticated user can submit a review. A confirmation email with the case n
 ```
 GET /api/v1/admin/reviews
 ```
-Returns all reviews submitted by users. Requires `ADMIN` role.
-
-**Response:** Array of review objects.
 
 ---
 
@@ -724,15 +755,22 @@ Returns all reviews submitted by users. Requires `ADMIN` role.
 ```
 POST /api/v1/admin/reviews/{caseNumber}/reply
 ```
-Admin replies to a review by case number. The reply is saved to the review and emailed to the user.
-
 **Body:**
 ```json
-{
-  "reply": "Thank you for your feedback! We are looking into this."
-}
+{ "reply": "Thank you for your feedback!" }
 ```
-**Response:** Updated review object with `adminReply` filled in.
+
+---
+
+### Account
+
+#### Delete Account
+```
+DELETE /api/v1/user/me
+```
+Permanently deletes the user's account and **all associated data** — wardrobe, outfit history, saved shopping items, mood boards, profile, OTP tokens. A farewell email is sent to the user's registered address automatically.
+
+**Response:** `204 No Content`
 
 ---
 
@@ -741,8 +779,8 @@ Admin replies to a review by case number. The reply is saved to the review and e
 | Status | Meaning |
 |--------|---------|
 | `400` | Bad request — missing or invalid fields |
-| `401` | Unauthorized — missing or invalid JWT token |
+| `401` | Unauthorized — missing, invalid, or expired JWT |
 | `403` | Forbidden — valid token but accessing another user's resource |
 | `404` | Resource not found |
-| `405` | Wrong HTTP method (e.g. GET instead of POST) |
+| `405` | Wrong HTTP method |
 | `500` | Server error — check Azure logs |

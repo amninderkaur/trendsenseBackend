@@ -24,7 +24,6 @@ public class AuthenticationController {
 
     private final AuthenticationService authenticationService;
     private final OtpService otpService;
-    private final OtpTokenRepository otpTokenRepository;
     private final UserRepository userRepository;
 
     @PostMapping(value = "/register", consumes = "application/json")
