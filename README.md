@@ -477,10 +477,11 @@ Content-Type: multipart/form-data
 ```
 Uploads a photo and uses Gemini Vision to evaluate the outfit against weather, style preferences, modesty, and colour season.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `image` | File | JPEG, PNG, or WebP photo of the outfit |
-| `city` | String | City name for live weather e.g. `"Toronto"` |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `image` | File | Yes | JPEG, PNG, or WebP photo of the outfit |
+| `occasion` | String | Yes | What the user is dressing for e.g. `"job interview"`, `"casual brunch"`, `"wedding"` |
+| `city` | String | No | City name for live weather e.g. `"Toronto"` — if omitted, weather evaluation is skipped |
 
 **Response:**
 ```json

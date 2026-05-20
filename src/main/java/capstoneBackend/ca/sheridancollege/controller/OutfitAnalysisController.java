@@ -27,8 +27,8 @@ public class OutfitAnalysisController {
     public ResponseEntity<OutfitAnalysisResponse> analyze(
             @AuthenticationPrincipal User user,
             @RequestParam("image") MultipartFile image,
-            @RequestParam("city") String city,
-            @RequestParam(value = "occasion", required = false) String occasion) {
+            @RequestParam(value = "city", required = false) String city,
+            @RequestParam("occasion") String occasion) {
 
         log.info("Outfit analysis requested by user {} for city '{}', occasion '{}'", user.getId(), city, occasion);
 

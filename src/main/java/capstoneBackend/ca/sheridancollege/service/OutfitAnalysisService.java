@@ -29,15 +29,19 @@ public class OutfitAnalysisService {
 
     public OutfitAnalysisResponse analyzeOutfit(String userId, MultipartFile image, String city, String occasion) {
 
-        // Step 1: Fetch weather
-        WeatherService.WeatherInfo weather = weatherService.getWeather(city);
-        if (weather == null) {
-            return OutfitAnalysisResponse.builder()
-                    .overallVerdict("Could not fetch weather for city: " + city + ". Please check the city name and try again.")
-                    .build();
+        // Step 1: Fetch weather (optional — skipped if city not provided)
+        WeatherService.WeatherInfo weather = null;
+        String weatherDescription = "not available";
+        if (city != null && !city.isBlank()) {
+            weather = weatherService.getWeather(city);
+            if (weather == null) {
+                return OutfitAnalysisResponse.builder()
+                        .overallVerdict("Could not fetch weather for city: " + city + ". Please check the city name and try again.")
+                        .build();
+            }
+            weatherDescription = String.format("%.1f°C, %s in %s", weather.temp(), weather.description(), weather.city());
+            log.info("Weather for {}: {}", city, weatherDescription);
         }
-        String weatherDescription = String.format("%.1f°C, %s in %s", weather.temp(), weather.description(), weather.city());
-        log.info("Weather for {}: {}", city, weatherDescription);
 
         // Step 2: Fetch user profile
         UserProfile profile = userProfileRepository.findByUserId(userId).orElse(null);
@@ -62,25 +66,26 @@ public class OutfitAnalysisService {
         }
 
         // Step 4: Build prompt and call Gemini with the image
-        String occasionContext = (occasion != null && !occasion.isBlank())
-                ? "The user is planning to wear this for: " + occasion + ". "
-                : "";
+        String occasionContext = "The user is planning to wear this for: " + occasion + ". ";
+        String weatherContext = (weather != null)
+                ? String.format("The person is in %s. Current weather: %s, %.1f°C. ", weather.city(), weather.description(), weather.temp())
+                : "No location provided — skip weather evaluation. ";
 
         String prompt = String.format(
-                "Analyze this outfit. The person is in %s. Current weather: %s, %.1f°C. " +
+                "Analyze this outfit. %s" +
                 "%s" +
                 "User preferences: %s aesthetic, %s modesty, cultural preferences: %s. " +
                 "Their colour season is %s. " +
                 "Evaluate: 1) What occasion is this outfit suitable for? " +
                 "2) Rate overall style out of 10. " +
-                "3) Is it appropriate for the current weather? " +
+                "3) Is it appropriate for the current weather (if weather is available)? " +
                 "4) What works well? " +
                 "5) What specific changes would improve it — different colours, add or remove layers, swap specific items? " +
                 "Return ONLY valid JSON with fields: occasion, styleScore, " +
-                "weatherVerdict (perfect/acceptable/not suitable), weatherReason, " +
+                "weatherVerdict (perfect/acceptable/not suitable/unknown), weatherReason, " +
                 "whatWorksWell (array), suggestions (array), overallVerdict, currentWeather. " +
                 "No markdown, no extra text.",
-                weather.city(), weather.description(), weather.temp(),
+                weatherContext,
                 occasionContext,
                 genderAesthetic, modestyLevel, culturalPreferences, season
         );
@@ -88,7 +93,7 @@ public class OutfitAnalysisService {
         String geminiResponse = geminiService.sendImagePrompt(base64Image, mimeType, prompt);
         if (geminiResponse == null) {
             return OutfitAnalysisResponse.builder()
-                    .currentWeather(weatherDescription)
+                    .currentWeather(weather != null ? weatherDescription : null)
                     .overallVerdict("Outfit analysis service is temporarily unavailable. Please try again.")
                     .build();
         }
