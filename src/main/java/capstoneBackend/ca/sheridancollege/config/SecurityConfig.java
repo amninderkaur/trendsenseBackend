@@ -50,10 +50,10 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         
-        config.setAllowedOrigins(List.of("http://localhost:8081", "http://localhost:8080"));
+        config.addAllowedOriginPattern("*");
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
-        config.setAllowCredentials(true);
+        config.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
