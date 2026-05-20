@@ -15,7 +15,7 @@ public class EmailService {
     public void sendOtpEmail(String toEmail, String otp) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
-        message.setSubject("Your Essemble verification code");
+        message.setSubject("Your Trend Sense verification code");
         message.setText("Your code is: " + otp + ". Expires in 10 minutes.");
         mailSender.send(message);
     }

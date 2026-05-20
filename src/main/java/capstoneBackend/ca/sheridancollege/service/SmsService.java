@@ -30,7 +30,7 @@ public class SmsService {
         Message.creator(
                 new PhoneNumber(toPhoneNumber),
                 new PhoneNumber(fromPhoneNumber),
-                "Your Essemble code is: " + otp + ". Expires in 10 minutes."
+                "Your Trend Sense code is: " + otp + ". Expires in 10 minutes."
         ).create();
     }
 }
