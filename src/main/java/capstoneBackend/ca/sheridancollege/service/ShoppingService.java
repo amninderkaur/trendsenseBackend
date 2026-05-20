@@ -40,42 +40,66 @@ public class ShoppingService {
 
         // Step 1: Fetch user profile
         UserProfile profile = userProfileRepository.findByUserId(userId).orElse(null);
-        String season = profile != null && profile.getColourSeason() != null
-                ? profile.getColourSeason() : "unknown";
-        String genderAesthetic = profile != null && profile.getGenderAesthetic() != null
-                ? profile.getGenderAesthetic() : "mixed";
-        String modestyLevel = profile != null && profile.getModestyLevel() != null
-                ? profile.getModestyLevel() : "medium";
-        String culturalPrefs = profile != null && profile.getCulturalPreferences() != null
-                ? String.join(", ", profile.getCulturalPreferences()) : "none";
+
+        String season        = val(profile != null ? profile.getColourSeason()    : null, "unknown");
+        String genderAes     = val(profile != null ? profile.getGenderAesthetic() : null, "mixed");
+        String modesty       = val(profile != null ? profile.getModestyLevel()    : null, "medium");
+        String culturalPrefs = join(profile != null ? profile.getCulturalPreferences() : null, "none");
+        String styles        = join(profile != null ? profile.getStyles()          : null, "any");
+        String favColors     = join(profile != null ? profile.getFavoriteColors()  : null, "any");
+        String avoidColors   = join(profile != null ? profile.getColorsToAvoid()   : null, "none");
+        String fit           = join(profile != null ? profile.getPreferredFit()    : null, "any");
+        String fabrics       = join(profile != null ? profile.getPreferredFabrics(): null, "any");
+        String dressFor      = join(profile != null ? profile.getDressFor()        : null, "general");
+        String climate       = val(profile != null ? profile.getClimate()          : null, "mixed");
+        String budgetPerItem = val(profile != null ? profile.getBudgetPerItem()    : null, "flexible");
+        String favBrands     = join(profile != null ? profile.getFavoriteBrands()  : null, "no preference");
+        String avoidBrands   = join(profile != null ? profile.getBrandsToAvoid()   : null, "none");
+        String priorities    = join(profile != null ? profile.getShoppingPriorities(): null, "price, quality");
+        String gender        = val(profile != null ? profile.getGender()           : null, "unspecified");
+        String ageGroup      = val(profile != null ? profile.getAgeGroup()         : null, "adult");
 
         // Step 2: Fetch wardrobe and identify gaps
         List<WardrobeItem> wardrobe = wardrobeRepository.findByUserId(userId);
         List<String> gaps = identifyGaps(wardrobe, request.getFocusCategory());
 
-        // Step 3: Build Gemini prompt (exact wording from spec)
+        // Step 3: Build Gemini prompt
         String gapsText = gaps.isEmpty() ? "general wardrobe refresh" : String.join(", ", gaps);
         String storePreference = request.isPreferOnline() ? "Focus on online stores." : "Include both online and nearby physical stores.";
 
         String prompt = String.format(
-            "The user is located in %s. Their colour season is %s. " +
-            "Based on their wardrobe they are missing: %s. " +
-            "Their budget is %.2f %s. " +
-            "Style preference: %s, modesty level: %s, cultural preferences: %s. " +
-            "%s " +
-            "Search for real products available in Canada matching these gaps and budget. " +
-            "Include online and nearby physical store options. " +
+            "You are a personal fashion shopping assistant. The user's profile is as follows:\n" +
+            "- Location: %s\n" +
+            "- Age group: %s, Gender: %s\n" +
+            "- Colour season: %s\n" +
+            "- Style preferences: %s\n" +
+            "- Favourite colours: %s; Colours to avoid: %s\n" +
+            "- Preferred fit: %s; Preferred fabrics: %s\n" +
+            "- Dresses for: %s; Climate: %s\n" +
+            "- Budget per item: %s; Overall budget for this trip: %.2f %s\n" +
+            "- Shopping priorities: %s\n" +
+            "- Favourite brands: %s; Brands to avoid: %s\n" +
+            "- Gender aesthetic: %s; Modesty level: %s; Cultural preferences: %s\n\n" +
+            "Based on their wardrobe they are missing: %s.\n" +
+            "%s\n" +
+            "Search for real products available in Canada that match the user's style, fit, fabric, colour and brand preferences. " +
+            "Respect their colours-to-avoid and brands-to-avoid lists. " +
+            "Keep suggestions within their budget per item where possible. " +
             "Return ONLY a valid JSON array of suggestions with fields: " +
             "item, category, whyItFits, estimatedPrice, storeName, storeType, link, nearbyLocation. " +
             "No markdown, no extra text.",
             request.getLocation(),
+            ageGroup, gender,
             season,
+            styles,
+            favColors, avoidColors,
+            fit, fabrics,
+            dressFor, climate,
+            budgetPerItem, request.getBudget(), request.getCurrency() != null ? request.getCurrency() : "CAD",
+            priorities,
+            favBrands, avoidBrands,
+            genderAes, modesty, culturalPrefs,
             gapsText,
-            request.getBudget(),
-            request.getCurrency() != null ? request.getCurrency() : "CAD",
-            genderAesthetic,
-            modestyLevel,
-            culturalPrefs,
             storePreference
         );
 
@@ -209,5 +233,13 @@ public class ShoppingService {
     private String str(Map<String, Object> map, String key) {
         Object v = map.get(key);
         return v != null ? v.toString() : null;
+    }
+
+    private String val(String value, String fallback) {
+        return (value != null && !value.isBlank()) ? value : fallback;
+    }
+
+    private String join(List<String> list, String fallback) {
+        return (list != null && !list.isEmpty()) ? String.join(", ", list) : fallback;
     }
 }
