@@ -10,4 +10,5 @@ import capstoneBackend.ca.sheridancollege.beans.MoodBoard;
 @Repository
 public interface MoodBoardRepository extends MongoRepository<MoodBoard, String> {
     List<MoodBoard> findByUserId(String userId);
+    void deleteByUserId(String userId);
 }

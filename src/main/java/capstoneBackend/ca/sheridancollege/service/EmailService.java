@@ -36,6 +36,22 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    public void sendAccountDeletionEmail(String toEmail, String displayName) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Trend Sense — Your account has been deleted");
+        message.setText(
+            "Hi " + (displayName != null ? displayName : "there") + ",\n\n" +
+            "We're sorry to see you go. Your Trend Sense account and all associated data " +
+            "have been permanently deleted as requested.\n\n" +
+            "If this was a mistake or you change your mind, you're always welcome to create " +
+            "a new account at any time.\n\n" +
+            "Thank you for being part of Trend Sense.\n\n" +
+            "— Trend Sense Team"
+        );
+        mailSender.send(message);
+    }
+
     public void sendAdminReply(String toEmail, long caseNumber, String reply) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);

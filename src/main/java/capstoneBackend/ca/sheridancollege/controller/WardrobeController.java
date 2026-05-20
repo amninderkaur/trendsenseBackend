@@ -18,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -160,6 +161,21 @@ public class WardrobeController {
     }
     
    
+    /** DELETE /api/v1/wardrobe/{id} — remove a clothing item */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteItem(
+            @AuthenticationPrincipal User user,
+            @PathVariable String id) {
+
+        return wardrobeRepository.findById(id)
+                .filter(item -> item.getUserId().equals(user.getId()))
+                .map(item -> {
+                    wardrobeRepository.delete(item);
+                    return ResponseEntity.noContent().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     /** PATCH /api/v1/wardrobe/{itemId}/worn — increment wear count */
     @PatchMapping("/{itemId}/worn")
     public ResponseEntity<?> markWorn(

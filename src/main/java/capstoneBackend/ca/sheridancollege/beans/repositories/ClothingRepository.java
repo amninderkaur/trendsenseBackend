@@ -10,4 +10,5 @@ import capstoneBackend.ca.sheridancollege.beans.ClothingItem;
 @Repository
 public interface ClothingRepository extends MongoRepository<ClothingItem, String> {
     List<ClothingItem> findByUserId(String userId);
+    void deleteByUserId(String userId);
 }

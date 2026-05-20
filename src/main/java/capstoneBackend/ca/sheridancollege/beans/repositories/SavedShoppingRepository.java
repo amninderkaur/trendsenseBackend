@@ -9,4 +9,5 @@ import capstoneBackend.ca.sheridancollege.beans.SavedShoppingItem;
 public interface SavedShoppingRepository extends MongoRepository<SavedShoppingItem, String> {
     List<SavedShoppingItem> findByUserIdOrderBySavedAtDesc(String userId);
     void deleteByIdAndUserId(String id, String userId);
+    void deleteByUserId(String userId);
 }

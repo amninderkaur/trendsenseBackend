@@ -8,4 +8,5 @@ import capstoneBackend.ca.sheridancollege.beans.UserProfile;
 
 public interface UserProfileRepository extends MongoRepository<UserProfile, String> {
     Optional<UserProfile> findByUserId(String userId);
+    void deleteByUserId(String userId);
 }
