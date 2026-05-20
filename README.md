@@ -37,6 +37,11 @@ You need 3 API keys before running the app:
 | `MONGODB_URI` | [MongoDB Atlas](https://www.mongodb.com/atlas) → Create cluster → Connect → Copy connection string |
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com) → Get API Key |
 | `OPENWEATHER_API_KEY` | [OpenWeatherMap](https://openweathermap.org/api) → Sign up → API Keys tab |
+| `MAIL_USERNAME` | Gmail address used to send emails |
+| `MAIL_PASSWORD` | Gmail App Password (not your login password) — [Generate one here](https://myaccount.google.com/apppasswords) |
+| `TWILIO_ACCOUNT_SID` | [Twilio Console](https://console.twilio.com) → Account Info |
+| `TWILIO_AUTH_TOKEN` | [Twilio Console](https://console.twilio.com) → Account Info |
+| `TWILIO_PHONE_NUMBER` | [Twilio Console](https://console.twilio.com) → Phone Numbers — must be in E.164 format |
 
 ---
 
@@ -145,33 +150,73 @@ POST /api/v1/auth/register
 **Body:**
 ```json
 {
-  "firstName": "Jane",
-  "lastName": "Doe",
   "email": "jane@example.com",
-  "password": "password123"
+  "password": "password123",
+  "phoneNumber": "+16471234567"
 }
 ```
+> `phoneNumber` is optional. Required only if the user wants OTP delivered via SMS. Must be in E.164 format e.g. `+16471234567`.
+
 **Response:**
 ```json
-{ "token": "eyJhbGci..." }
+{ "message": "Registration successful. Please log in." }
 ```
 
 ---
 
 #### Login
 ```
-POST /api/v1/auth/login
+POST /api/v1/auth/authenticate
 ```
 **Body:**
 ```json
 {
   "email": "jane@example.com",
-  "password": "password123"
+  "password": "password123",
+  "deliveryMethod": "email"
+}
+```
+> `deliveryMethod` is `"email"` (default) or `"sms"`. Only applies on first login.
+
+**Response — first login (OTP required):**
+```json
+{
+  "message": "OTP sent",
+  "requiresOtp": true,
+  "deliveryMethod": "email"
+}
+```
+
+**Response — returning user:**
+```json
+{
+  "token": "eyJhbGci...",
+  "userId": "abc123",
+  "requiresOtp": false
+}
+```
+
+---
+
+#### Verify OTP
+```
+POST /api/v1/auth/verify-otp
+```
+Verifies the OTP sent during first login. Returns a JWT token on success.
+
+**Body:**
+```json
+{
+  "email": "jane@example.com",
+  "otp": "123456"
 }
 ```
 **Response:**
 ```json
-{ "token": "eyJhbGci..." }
+{
+  "token": "eyJhbGci...",
+  "userId": "abc123"
+}
 ```
 
 ---
@@ -623,6 +668,63 @@ Multi-turn Gemini-powered fashion assistant. The server is stateless — send th
   "reply": "White sneakers or loafers would work perfectly with that look..."
 }
 ```
+
+---
+
+### Reviews
+
+#### Submit a Review
+```
+POST /api/v1/reviews
+```
+Any authenticated user can submit a review. A confirmation email with the case number is sent to the user automatically.
+
+**Body:**
+```json
+{
+  "message": "Love the outfit suggestions!",
+  "rating": 5
+}
+```
+**Response:**
+```json
+{
+  "id": "...",
+  "caseNumber": 1,
+  "userId": "abc123",
+  "email": "jane@example.com",
+  "message": "Love the outfit suggestions!",
+  "rating": 5,
+  "adminReply": null,
+  "createdAt": "2025-05-20T10:00:00Z"
+}
+```
+
+---
+
+#### Get All Reviews *(Admin only)*
+```
+GET /api/v1/admin/reviews
+```
+Returns all reviews submitted by users. Requires `ADMIN` role.
+
+**Response:** Array of review objects.
+
+---
+
+#### Reply to a Review *(Admin only)*
+```
+POST /api/v1/admin/reviews/{caseNumber}/reply
+```
+Admin replies to a review by case number. The reply is saved to the review and emailed to the user.
+
+**Body:**
+```json
+{
+  "reply": "Thank you for your feedback! We are looking into this."
+}
+```
+**Response:** Updated review object with `adminReply` filled in.
 
 ---
 
