@@ -13,19 +13,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import capstoneBackend.ca.sheridancollege.beans.OutfitAnalysisResponse;
 import capstoneBackend.ca.sheridancollege.beans.UserProfile;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserProfileRepository;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@AllArgsConstructor
 public class OutfitAnalysisService {
 
     private final WeatherService weatherService;
     private final GeminiService geminiService;
     private final UserProfileRepository userProfileRepository;
-
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public OutfitAnalysisService(WeatherService weatherService, GeminiService geminiService,
+                                  UserProfileRepository userProfileRepository) {
+        this.weatherService = weatherService;
+        this.geminiService = geminiService;
+        this.userProfileRepository = userProfileRepository;
+    }
 
     public OutfitAnalysisResponse analyzeOutfit(String userId, MultipartFile image, String city, String occasion) {
 
@@ -57,7 +61,7 @@ public class OutfitAnalysisService {
         String mimeType;
         try {
             base64Image = Base64.getEncoder().encodeToString(image.getBytes());
-            mimeType = image.getContentType();
+            mimeType = image.getContentType() != null ? image.getContentType() : "image/jpeg";
         } catch (Exception e) {
             log.error("Failed to read uploaded image: {}", e.getMessage());
             return OutfitAnalysisResponse.builder()
