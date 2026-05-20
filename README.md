@@ -56,12 +56,17 @@ MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/fashionapp
 GEMINI_API_KEY=your_gemini_api_key_here
 OPENWEATHER_API_KEY=your_openweather_api_key_here
 AI_SERVICE_URL=http://127.0.0.1:5000
+MAIL_USERNAME=your_gmail@gmail.com
+MAIL_PASSWORD=your_gmail_app_password
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=+1XXXXXXXXXX
 ```
 
 **Option A — IntelliJ (recommended):**
 1. Run → Edit Configurations → Your Spring Boot config
 2. Click **Modify options → Environment variables**
-3. Paste all 4 variables
+3. Paste all variables
 
 **Option B — Terminal (Mac/Linux):**
 ```bash
@@ -152,10 +157,12 @@ POST /api/v1/auth/register
 {
   "email": "jane@example.com",
   "password": "password123",
-  "phoneNumber": "+16471234567"
+  "phoneNumber": "+16471234567",
+  "deliveryMethod": "email"
 }
 ```
-> `phoneNumber` is optional. Required only if the user wants OTP delivered via SMS. Must be in E.164 format e.g. `+16471234567`.
+> `phoneNumber` is optional. Required only if `deliveryMethod` is `"sms"`. Must be in E.164 format e.g. `+16471234567`.  
+> `deliveryMethod` is `"email"` (default) or `"sms"`. This is saved to the user and used for all future OTP and review notifications.
 
 **Response:**
 ```json
@@ -192,6 +199,7 @@ POST /api/v1/auth/authenticate
 {
   "token": "eyJhbGci...",
   "userId": "abc123",
+  "role": "USER",
   "requiresOtp": false
 }
 ```
