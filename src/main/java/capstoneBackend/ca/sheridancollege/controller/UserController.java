@@ -14,7 +14,6 @@ import capstoneBackend.ca.sheridancollege.beans.repositories.OutfitHistoryReposi
 import capstoneBackend.ca.sheridancollege.beans.repositories.SavedShoppingRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserProfileRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserRepository;
-import capstoneBackend.ca.sheridancollege.beans.repositories.WardrobeRepository;
 import capstoneBackend.ca.sheridancollege.service.EmailService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +26,6 @@ public class UserController {
 
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
-    private final WardrobeRepository wardrobeRepository;
     private final ClothingRepository clothingRepository;
     private final MoodBoardRepository moodBoardRepository;
     private final OutfitHistoryRepository outfitHistoryRepository;
@@ -51,7 +49,6 @@ public class UserController {
                 .orElse(null);
 
         // Delete all user data
-        wardrobeRepository.deleteByUserId(userId);
         clothingRepository.deleteByUserId(userId);
         moodBoardRepository.deleteByUserId(userId);
         outfitHistoryRepository.deleteByUserId(userId);

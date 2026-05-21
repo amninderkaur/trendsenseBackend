@@ -5,24 +5,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
 
+
 @Configuration
 public class WebClientConfig {
-
-    @Value("${ai.service.url}")
-    private String aiServiceUrl;
 
     @Value("${gemini.api.url}")
     private String geminiApiUrl;
 
-    /** WebClient for the legacy YOLO/FastAPI service */
-    @Bean
-    public WebClient aiClient() {
-        return WebClient.builder()
-                .baseUrl(aiServiceUrl)
-                .build();
-    }
-
-    /** WebClient for the Gemini / Imagen REST API */
     @Bean
     public WebClient geminiClient() {
         return WebClient.builder()

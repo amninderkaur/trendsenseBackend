@@ -11,13 +11,13 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import capstoneBackend.ca.sheridancollege.beans.ClothingItem;
 import capstoneBackend.ca.sheridancollege.beans.ShoppingRequest;
 import capstoneBackend.ca.sheridancollege.beans.ShoppingSuggestionsResponse;
 import capstoneBackend.ca.sheridancollege.beans.ShoppingSuggestionsResponse.ShoppingSuggestion;
 import capstoneBackend.ca.sheridancollege.beans.UserProfile;
-import capstoneBackend.ca.sheridancollege.beans.WardrobeItem;
+import capstoneBackend.ca.sheridancollege.beans.repositories.ClothingRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserProfileRepository;
-import capstoneBackend.ca.sheridancollege.beans.repositories.WardrobeRepository;
 import capstoneBackend.ca.sheridancollege.service.GeminiService.GroundedResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +32,7 @@ public class ShoppingService {
     );
 
     private final GeminiService geminiService;
-    private final WardrobeRepository wardrobeRepository;
+    private final ClothingRepository clothingRepository;
     private final UserProfileRepository userProfileRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -60,7 +60,7 @@ public class ShoppingService {
         String ageGroup      = val(profile != null ? profile.getAgeGroup()         : null, "adult");
 
         // Step 2: Fetch wardrobe and identify gaps
-        List<WardrobeItem> wardrobe = wardrobeRepository.findByUserId(userId);
+        List<ClothingItem> wardrobe = clothingRepository.findByUserId(userId);
         List<String> gaps = identifyGaps(wardrobe, request.getFocusCategory());
 
         // Step 3: Build Gemini prompt
@@ -134,14 +134,14 @@ public class ShoppingService {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private List<String> identifyGaps(List<WardrobeItem> wardrobe, String focusCategory) {
+    private List<String> identifyGaps(List<ClothingItem> wardrobe, String focusCategory) {
         if (focusCategory != null && !focusCategory.isBlank()) {
             return List.of(focusCategory.toLowerCase());
         }
 
         Set<String> owned = wardrobe.stream()
-                .filter(item -> item.getTag() != null)
-                .map(item -> item.getTag().toLowerCase())
+                .filter(item -> item.getTags() != null && item.getTags().getType() != null)
+                .map(item -> item.getTags().getType().toLowerCase())
                 .collect(Collectors.toSet());
 
         return STANDARD_CATEGORIES.stream()

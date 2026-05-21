@@ -10,15 +10,15 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import capstoneBackend.ca.sheridancollege.beans.ClothingItem;
 import capstoneBackend.ca.sheridancollege.beans.MoodBoard;
 import capstoneBackend.ca.sheridancollege.beans.MoodBoardMatchRequest;
 import capstoneBackend.ca.sheridancollege.beans.MoodBoardRequest;
 import capstoneBackend.ca.sheridancollege.beans.MoodBoardResponse;
 import capstoneBackend.ca.sheridancollege.beans.UserProfile;
-import capstoneBackend.ca.sheridancollege.beans.WardrobeItem;
+import capstoneBackend.ca.sheridancollege.beans.repositories.ClothingRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.MoodBoardRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserProfileRepository;
-import capstoneBackend.ca.sheridancollege.beans.repositories.WardrobeRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -28,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 public class MoodBoardService {
 
     private final MoodBoardRepository moodBoardRepository;
-    private final WardrobeRepository wardrobeRepository;
+    private final ClothingRepository clothingRepository;
     private final UserProfileRepository userProfileRepository;
     private final GeminiService geminiService;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -83,7 +83,7 @@ public class MoodBoardService {
     public MoodBoardResponse matchOutfits(String userId, MoodBoardMatchRequest request) {
 
         // Step 1: Fetch wardrobe
-        List<WardrobeItem> wardrobe = wardrobeRepository.findByUserId(userId);
+        List<ClothingItem> wardrobe = clothingRepository.findByUserId(userId);
         if (wardrobe.isEmpty()) {
             return MoodBoardResponse.builder()
                     .mood(request.getMood())
@@ -93,10 +93,12 @@ public class MoodBoardService {
 
         // Step 2: Build wardrobe description for prompt (include itemId so Gemini can reference it)
         String wardrobeList = wardrobe.stream()
-                .map(item -> String.format("id: %s, name: %s, category: %s",
-                        item.getId(),
-                        item.getTag() != null ? item.getTag() : "unknown",
-                        item.getTag() != null ? item.getTag() : "unknown"))
+                .map(item -> {
+                    ClothingItem.Tags t = item.getTags();
+                    String name = t != null ? t.getColor() + " " + t.getType() : "unknown";
+                    String category = t != null ? t.getType() : "unknown";
+                    return String.format("id: %s, name: %s, category: %s", item.getId(), name, category);
+                })
                 .collect(Collectors.joining("\n"));
 
         // Step 3: Fetch user preferences
