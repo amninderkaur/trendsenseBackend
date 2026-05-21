@@ -62,10 +62,10 @@ public class UserController {
 
     /**
      * PATCH /api/v1/user/me
-     * Updates the user's name.
+     * Updates name, phoneNumber, and/or deliveryMethod.
      */
     @PatchMapping("/me")
-    public ResponseEntity<Map<String, Object>> updateName(
+    public ResponseEntity<Map<String, Object>> updateUser(
             @AuthenticationPrincipal User user,
             @RequestBody Map<String, String> body) {
 
@@ -75,10 +75,21 @@ public class UserController {
         if (body.containsKey("name")) {
             fresh.setName(body.get("name"));
         }
+        if (body.containsKey("phoneNumber")) {
+            fresh.setPhoneNumber(body.get("phoneNumber"));
+        }
+        if (body.containsKey("deliveryMethod")) {
+            String dm = body.get("deliveryMethod");
+            if ("email".equals(dm) || "sms".equals(dm)) {
+                fresh.setDeliveryMethod(dm);
+            }
+        }
         userRepository.save(fresh);
 
         return ResponseEntity.ok(Map.of(
-                "name", fresh.getName() != null ? fresh.getName() : ""
+                "name",           fresh.getName()           != null ? fresh.getName()           : "",
+                "phoneNumber",    fresh.getPhoneNumber()    != null ? fresh.getPhoneNumber()    : "",
+                "deliveryMethod", fresh.getDeliveryMethod() != null ? fresh.getDeliveryMethod() : "email"
         ));
     }
 
