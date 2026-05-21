@@ -1,10 +1,21 @@
 package capstoneBackend.ca.sheridancollege.controller;
 
+import java.io.IOException;
+import java.util.Base64;
+import java.util.Map;
+
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import capstoneBackend.ca.sheridancollege.beans.User;
 import capstoneBackend.ca.sheridancollege.beans.repositories.ClothingRepository;
@@ -34,6 +45,62 @@ public class UserController {
     private final EmailService emailService;
 
     /**
+     * GET /api/v1/user/me
+     * Returns the authenticated user's name and profile picture (Base64).
+     */
+    @GetMapping("/me")
+    public ResponseEntity<Map<String, Object>> getMe(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(Map.of(
+                "userId", user.getId(),
+                "email", user.getEmail(),
+                "name", user.getName() != null ? user.getName() : "",
+                "profilePicture", user.getProfilePicture() != null
+                        ? Base64.getEncoder().encodeToString(user.getProfilePicture()) : "",
+                "profilePictureType", user.getProfilePictureType() != null ? user.getProfilePictureType() : ""
+        ));
+    }
+
+    /**
+     * PATCH /api/v1/user/me
+     * Updates the user's name.
+     */
+    @PatchMapping("/me")
+    public ResponseEntity<Map<String, Object>> updateName(
+            @AuthenticationPrincipal User user,
+            @RequestBody Map<String, String> body) {
+
+        if (body.containsKey("name")) {
+            user.setName(body.get("name"));
+        }
+        userRepository.save(user);
+
+        return ResponseEntity.ok(Map.of(
+                "name", user.getName() != null ? user.getName() : ""
+        ));
+    }
+
+    /**
+     * POST /api/v1/user/me/profile-picture
+     * Uploads a profile picture and stores the bytes in MongoDB. (optional)
+     */
+    @PostMapping(value = "/me/profile-picture", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> uploadProfilePicture(
+            @AuthenticationPrincipal User user,
+            @RequestParam("file") MultipartFile file) throws IOException {
+
+        user.setProfilePicture(file.getBytes());
+        user.setProfilePictureType(file.getContentType());
+        userRepository.save(user);
+
+        log.info("Saved profile picture for user {}", user.getId());
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Profile picture updated",
+                "profilePictureType", file.getContentType()
+        ));
+    }
+
+    /**
      * DELETE /api/v1/user/me
      * Deletes the authenticated user's account and all associated data,
      * then sends a farewell email.
@@ -43,12 +110,10 @@ public class UserController {
         String userId = user.getId();
         String email  = user.getEmail();
 
-        // Fetch display name from profile if available (best-effort)
         String displayName = userProfileRepository.findByUserId(userId)
                 .map(p -> p.getDisplayName())
                 .orElse(null);
 
-        // Delete all user data
         clothingRepository.deleteByUserId(userId);
         moodBoardRepository.deleteByUserId(userId);
         outfitHistoryRepository.deleteByUserId(userId);
@@ -59,7 +124,6 @@ public class UserController {
 
         log.info("Deleted account and all data for user {}", userId);
 
-        // Send farewell email (best-effort — don't fail the request if email fails)
         try {
             emailService.sendAccountDeletionEmail(email, displayName);
         } catch (Exception e) {

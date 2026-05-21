@@ -1,5 +1,7 @@
 package capstoneBackend.ca.sheridancollege.service;
 
+import java.util.Base64;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -33,6 +35,7 @@ public class AuthenticationService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.USER)
+                .name(request.getName())
                 .phoneNumber(request.getPhoneNumber())
                 .deliveryMethod(request.getDeliveryMethod() != null ? request.getDeliveryMethod() : "email")
                 .build();
@@ -60,6 +63,9 @@ public class AuthenticationService {
                     .token(jwtToken)
                     .userId(user.getId())
                     .role(user.getRole().name())
+                    .name(user.getName())
+                    .profilePicture(toBase64(user.getProfilePicture()))
+                    .profilePictureType(user.getProfilePictureType())
                     .requiresOtp(false)
                     .build();
         }
@@ -74,6 +80,10 @@ public class AuthenticationService {
                 .build();
     }
 
+    private String toBase64(byte[] bytes) {
+        return bytes != null ? Base64.getEncoder().encodeToString(bytes) : null;
+    }
+
     // Called after OTP is verified — returns JWT
     public AuthenticationResponse generateTokenForVerifiedUser(String email) {
         User user = userRepository.findByEmail(email)
@@ -83,6 +93,13 @@ public class AuthenticationService {
         userRepository.save(user);
 
         String jwtToken = jwtService.generateToken(user);
-        return AuthenticationResponse.builder().token(jwtToken).userId(user.getId()).role(user.getRole().name()).build();
+        return AuthenticationResponse.builder()
+                .token(jwtToken)
+                .userId(user.getId())
+                .role(user.getRole().name())
+                .name(user.getName())
+                .profilePicture(toBase64(user.getProfilePicture()))
+                .profilePictureType(user.getProfilePictureType())
+                .build();
     }
 }

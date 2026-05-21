@@ -30,7 +30,7 @@ public class AuthenticationServiceTest {
 
     @Test
     void register_ShouldReturnToken_WhenEmailNotTaken() {
-        AuthenticationRequest request = new AuthenticationRequest("new@test.com", "pass123", null, "email");
+        AuthenticationRequest request = new AuthenticationRequest("new@test.com", "pass123", null, null, "email");
 
         when(userRepository.findByEmail("new@test.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("pass123")).thenReturn("encodedPass");
@@ -43,7 +43,7 @@ public class AuthenticationServiceTest {
 
     @Test
     void register_ShouldThrow_WhenEmailAlreadyExists() {
-        AuthenticationRequest request = new AuthenticationRequest("existing@test.com", "pass", null, "email");
+        AuthenticationRequest request = new AuthenticationRequest("existing@test.com", "pass", null, null, "email");
 
         when(userRepository.findByEmail("existing@test.com"))
                 .thenReturn(Optional.of(new User()));
@@ -53,7 +53,7 @@ public class AuthenticationServiceTest {
 
     @Test
     void authenticate_ShouldReturnToken_WhenCredentialsValid() {
-        AuthenticationRequest request = new AuthenticationRequest("user@test.com", "pass", null, "email");
+        AuthenticationRequest request = new AuthenticationRequest("user@test.com", "pass", null, null, "email");
         User user = User.builder().email("user@test.com").password("encoded").role(Role.USER).hasLoggedInBefore(true).build();
 
         when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));

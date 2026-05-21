@@ -13,6 +13,9 @@ public class AuthenticationResponse {
     private String token;
     private String userId;
     private String role;
+    private String name;
+    private String profilePicture;      // Base64-encoded image for the frontend
+    private String profilePictureType;
     private String message;
     private Boolean requiresOtp;
     private String deliveryMethod;

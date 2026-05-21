@@ -26,10 +26,13 @@ public class User implements UserDetails{
     private String email;
     private String password;
     private Role role;
+    private String name;
+    private byte[] profilePicture;         // image bytes stored in MongoDB
+    private String profilePictureType;     // e.g. "image/jpeg"
     private String phoneNumber;
-    private String deliveryMethod; // "email" or "sms"
+    private String deliveryMethod;         // "email" or "sms"
     private boolean hasLoggedInBefore;
-    
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Role effectiveRole = role != null ? role : Role.USER;
@@ -38,7 +41,7 @@ public class User implements UserDetails{
 
     @Override
     public String getUsername() {
-        return email; 
+        return email;
     }
 
     @Override
