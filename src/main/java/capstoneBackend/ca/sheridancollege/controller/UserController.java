@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.Base64;
 import java.util.Map;
 
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -83,7 +82,7 @@ public class UserController {
      * POST /api/v1/user/me/profile-picture
      * Uploads a profile picture and stores the bytes in MongoDB. (optional)
      */
-    @PostMapping(value = "/me/profile-picture", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping("/me/profile-picture")
     public ResponseEntity<Map<String, Object>> uploadProfilePicture(
             @AuthenticationPrincipal User user,
             @RequestParam("file") MultipartFile file) throws IOException {
