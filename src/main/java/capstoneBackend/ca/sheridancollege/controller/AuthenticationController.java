@@ -2,6 +2,7 @@ package capstoneBackend.ca.sheridancollege.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,6 +26,7 @@ public class AuthenticationController {
     private final AuthenticationService authenticationService;
     private final OtpService otpService;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @PostMapping(value = "/register", consumes = "application/json")
     public ResponseEntity<AuthenticationResponse> register(@RequestBody AuthenticationRequest request) {
@@ -74,5 +76,53 @@ public class AuthenticationController {
         otpService.generateAndSendOtp(email, deliveryMethod);
 
         return ResponseEntity.ok(Map.of("message", "A new OTP has been sent"));
+    }
+
+    /**
+     * POST /api/v1/auth/forgot-password
+     * Sends an OTP to the user's email to begin the password reset flow.
+     * Body: { "email": "user@example.com" }
+     */
+    @PostMapping(value = "/forgot-password", consumes = "application/json")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Email is required"));
+        }
+        if (userRepository.findByEmail(email).isEmpty()) {
+            // Don't reveal whether the email exists
+            return ResponseEntity.ok(Map.of("message", "If that email is registered, an OTP has been sent"));
+        }
+        otpService.generateAndSendOtp(email, "email");
+        return ResponseEntity.ok(Map.of("message", "If that email is registered, an OTP has been sent"));
+    }
+
+    /**
+     * POST /api/v1/auth/reset-password
+     * Verifies OTP then sets the new password.
+     * Body: { "email": "...", "otp": "123456", "newPassword": "..." }
+     */
+    @PostMapping(value = "/reset-password", consumes = "application/json")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> body) {
+        String email       = body.get("email");
+        String otp         = body.get("otp");
+        String newPassword = body.get("newPassword");
+
+        if (email == null || otp == null || newPassword == null || newPassword.length() < 6) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "email, otp, and newPassword (min 6 chars) are required"));
+        }
+
+        if (!otpService.validateOtp(email, otp)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Invalid or expired OTP"));
+        }
+
+        userRepository.findByEmail(email).ifPresent(user -> {
+            user.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+        });
+
+        return ResponseEntity.ok(Map.of("message", "Password reset successful. Please log in."));
     }
 }

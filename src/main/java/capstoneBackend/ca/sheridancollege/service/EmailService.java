@@ -52,6 +52,20 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    public void sendPasswordChangedEmail(String toEmail, String name) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Trend Sense — Your password has been changed");
+        message.setText(
+            "Hi " + (name != null ? name : "there") + ",\n\n" +
+            "Your Trend Sense password was just changed.\n\n" +
+            "If you made this change, no action is needed.\n" +
+            "If you did NOT make this change, reset your password immediately.\n\n" +
+            "— Trend Sense Team"
+        );
+        mailSender.send(message);
+    }
+
     public void sendAdminReply(String toEmail, long caseNumber, String reply) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);

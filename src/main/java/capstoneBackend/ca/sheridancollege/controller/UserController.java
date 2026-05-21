@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 import capstoneBackend.ca.sheridancollege.beans.User;
 import capstoneBackend.ca.sheridancollege.beans.repositories.ClothingRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.MoodBoardRepository;
@@ -26,6 +29,7 @@ import capstoneBackend.ca.sheridancollege.beans.repositories.SavedShoppingReposi
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserProfileRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserRepository;
 import capstoneBackend.ca.sheridancollege.service.EmailService;
+import capstoneBackend.ca.sheridancollege.service.OtpService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,6 +47,8 @@ public class UserController {
     private final SavedShoppingRepository savedShoppingRepository;
     private final OtpTokenRepository otpTokenRepository;
     private final EmailService emailService;
+    private final OtpService otpService;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * GET /api/v1/user/me
@@ -116,6 +122,50 @@ public class UserController {
                 "message", "Profile picture updated",
                 "profilePictureType", file.getContentType()
         ));
+    }
+
+    /**
+     * POST /api/v1/user/me/change-password
+     * Verifies current password, sets new password, sends security alert email + OTP.
+     */
+    @PostMapping("/me/change-password")
+    public ResponseEntity<Map<String, Object>> changePassword(
+            @AuthenticationPrincipal User user,
+            @RequestBody Map<String, String> body) {
+
+        String currentPassword = body.get("currentPassword");
+        String newPassword     = body.get("newPassword");
+
+        if (currentPassword == null || newPassword == null || newPassword.length() < 6) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "currentPassword and newPassword (min 6 chars) are required"));
+        }
+
+        User fresh = userRepository.findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!passwordEncoder.matches(currentPassword, fresh.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Current password is incorrect"));
+        }
+
+        fresh.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(fresh);
+
+        log.info("Password changed for user {}", fresh.getId());
+
+        // Send security notification email
+        try {
+            emailService.sendPasswordChangedEmail(fresh.getEmail(), fresh.getName());
+        } catch (Exception e) {
+            log.warn("Could not send password changed email to {}: {}", fresh.getEmail(), e.getMessage());
+        }
+
+        // Re-send OTP so the user re-verifies on next login
+        String deliveryMethod = fresh.getDeliveryMethod() != null ? fresh.getDeliveryMethod() : "email";
+        otpService.generateAndSendOtp(fresh.getEmail(), deliveryMethod);
+
+        return ResponseEntity.ok(Map.of("message", "Password changed. An OTP has been sent to verify your identity."));
     }
 
     /**
