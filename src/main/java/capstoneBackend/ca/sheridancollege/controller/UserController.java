@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -68,13 +69,16 @@ public class UserController {
             @AuthenticationPrincipal User user,
             @RequestBody Map<String, String> body) {
 
+        User fresh = userRepository.findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         if (body.containsKey("name")) {
-            user.setName(body.get("name"));
+            fresh.setName(body.get("name"));
         }
-        userRepository.save(user);
+        userRepository.save(fresh);
 
         return ResponseEntity.ok(Map.of(
-                "name", user.getName() != null ? user.getName() : ""
+                "name", fresh.getName() != null ? fresh.getName() : ""
         ));
     }
 
@@ -85,13 +89,17 @@ public class UserController {
     @PostMapping("/me/profile-picture")
     public ResponseEntity<Map<String, Object>> uploadProfilePicture(
             @AuthenticationPrincipal User user,
-            @RequestParam("file") MultipartFile file) throws IOException {
+            @RequestPart("file") MultipartFile file) throws IOException {
 
-        user.setProfilePicture(file.getBytes());
-        user.setProfilePictureType(file.getContentType());
-        userRepository.save(user);
+        // Load fresh from MongoDB so we don't overwrite other fields with stale JWT data
+        User fresh = userRepository.findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        log.info("Saved profile picture for user {}", user.getId());
+        fresh.setProfilePicture(file.getBytes());
+        fresh.setProfilePictureType(file.getContentType());
+        userRepository.save(fresh);
+
+        log.info("Saved profile picture ({} bytes) for user {}", file.getBytes().length, user.getId());
 
         return ResponseEntity.ok(Map.of(
                 "message", "Profile picture updated",
