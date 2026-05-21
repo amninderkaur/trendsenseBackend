@@ -155,10 +155,12 @@ POST /api/v1/auth/register
 {
   "email": "jane@example.com",
   "password": "password123",
+  "name": "Jane",
   "phoneNumber": "+16471234567",
   "deliveryMethod": "email"
 }
 ```
+> `name` is the user's display name — collected at sign-up.  
 > `phoneNumber` is optional. Required only if `deliveryMethod` is `"sms"`. Must be in E.164 format.  
 > `deliveryMethod` is `"email"` (default) or `"sms"`.
 
@@ -197,6 +199,9 @@ POST /api/v1/auth/authenticate
   "token": "eyJhbGci...",
   "userId": "abc123",
   "role": "USER",
+  "name": "Jane",
+  "profilePicture": "<base64-encoded image or null>",
+  "profilePictureType": "image/jpeg",
   "requiresOtp": false
 }
 ```
@@ -764,6 +769,57 @@ POST /api/v1/admin/reviews/{caseNumber}/reply
 ---
 
 ### Account
+
+#### Get Current User
+```
+GET /api/v1/user/me
+```
+**Response:**
+```json
+{
+  "userId": "abc123",
+  "email": "jane@example.com",
+  "name": "Jane",
+  "profilePicture": "<base64-encoded image or empty string>",
+  "profilePictureType": "image/jpeg"
+}
+```
+
+---
+
+#### Update Name
+```
+PATCH /api/v1/user/me
+```
+**Body:**
+```json
+{ "name": "Jane Smith" }
+```
+**Response:**
+```json
+{ "name": "Jane Smith" }
+```
+
+---
+
+#### Upload Profile Picture *(optional)*
+```
+POST /api/v1/user/me/profile-picture
+Content-Type: multipart/form-data
+```
+| Field | Type | Description |
+|-------|------|-------------|
+| `file` | File | JPEG, PNG, or WebP — stored as binary in MongoDB |
+
+**Response:**
+```json
+{
+  "message": "Profile picture updated",
+  "profilePictureType": "image/jpeg"
+}
+```
+
+---
 
 #### Delete Account
 ```
