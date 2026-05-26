@@ -22,7 +22,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import capstoneBackend.ca.sheridancollege.beans.User;
 import capstoneBackend.ca.sheridancollege.beans.repositories.ClothingRepository;
-import capstoneBackend.ca.sheridancollege.beans.repositories.MoodBoardRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.OtpTokenRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.OutfitHistoryRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.SavedShoppingRepository;
@@ -42,7 +41,6 @@ public class UserController {
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
     private final ClothingRepository clothingRepository;
-    private final MoodBoardRepository moodBoardRepository;
     private final OutfitHistoryRepository outfitHistoryRepository;
     private final SavedShoppingRepository savedShoppingRepository;
     private final OtpTokenRepository otpTokenRepository;
@@ -183,7 +181,6 @@ public class UserController {
                 .orElse(null);
 
         clothingRepository.deleteByUserId(userId);
-        moodBoardRepository.deleteByUserId(userId);
         outfitHistoryRepository.deleteByUserId(userId);
         savedShoppingRepository.deleteByUserId(userId);
         userProfileRepository.deleteByUserId(userId);

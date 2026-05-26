@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 import capstoneBackend.ca.sheridancollege.beans.Role;
 import capstoneBackend.ca.sheridancollege.beans.User;
 import capstoneBackend.ca.sheridancollege.beans.repositories.ClothingRepository;
-import capstoneBackend.ca.sheridancollege.beans.repositories.MoodBoardRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.OtpTokenRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.OutfitHistoryRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.SavedShoppingRepository;
@@ -39,7 +38,6 @@ public class AdminController {
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
     private final ClothingRepository clothingRepository;
-    private final MoodBoardRepository moodBoardRepository;
     private final OutfitHistoryRepository outfitHistoryRepository;
     private final SavedShoppingRepository savedShoppingRepository;
     private final OtpTokenRepository otpTokenRepository;
@@ -66,17 +64,16 @@ public class AdminController {
 
     /**
      * GET /api/v1/admin/stats
-     * Returns overall app stats: users, clothing items, outfits, mood boards, reviews, saved items.
+     * Returns overall app stats: users, clothing items, outfits, reviews, saved items.
      */
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getStats() {
         return ResponseEntity.ok(Map.of(
-                "totalUsers",        userRepository.count(),
-                "totalClothingItems", clothingRepository.count(),
+                "totalUsers",            userRepository.count(),
+                "totalClothingItems",    clothingRepository.count(),
                 "totalOutfitsGenerated", outfitHistoryRepository.count(),
-                "totalMoodBoards",   moodBoardRepository.count(),
-                "totalReviews",      reviewRepository.count(),
-                "totalSavedItems",   savedShoppingRepository.count()
+                "totalReviews",          reviewRepository.count(),
+                "totalSavedItems",       savedShoppingRepository.count()
         ));
     }
 
@@ -193,7 +190,6 @@ public class AdminController {
         }
 
         clothingRepository.deleteByUserId(id);
-        moodBoardRepository.deleteByUserId(id);
         outfitHistoryRepository.deleteByUserId(id);
         savedShoppingRepository.deleteByUserId(id);
         userProfileRepository.deleteByUserId(id);

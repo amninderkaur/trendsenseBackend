@@ -369,42 +369,6 @@ Permanently removes the item from the user's wardrobe. Returns `404` if not foun
 
 ---
 
-#### Mark Item as Worn
-```
-PATCH /api/v1/wardrobe/{itemId}/worn
-```
-No body needed. Increments the item's wear count by 1.
-
-**Response:**
-```json
-{
-  "itemId": "abc123",
-  "name": "White shirt",
-  "wearCount": 4
-}
-```
-
----
-
-#### Get Wardrobe Usage Stats
-```
-GET /api/v1/wardrobe/usage
-```
-Returns the wardrobe sorted by least worn first.
-
-**Response:**
-```json
-{
-  "leastWorn": [
-    { "itemId": "xyz789", "name": "Red blazer", "wearCount": 0, "category": "outerwear" }
-  ],
-  "totalItems": 24,
-  "unwornCount": 8
-}
-```
-
----
-
 ### Outfit Suggestion
 
 #### Get AI Outfit Suggestion
@@ -533,6 +497,27 @@ Result is automatically saved to the user's profile.
 
 ---
 
+#### Get Saved Colour Analysis
+```
+GET /api/profile
+```
+Returns the full user profile including `colourSeason` and `colourPalette` fields. No separate endpoint needed — read these fields from the profile response.
+
+---
+
+#### Clear Colour Analysis
+```
+DELETE /api/profile/colour
+```
+Removes the saved colour season and palette from the user's profile. All other profile data is kept.
+
+**Response:**
+```json
+{ "message": "Colour analysis cleared" }
+```
+
+---
+
 ### Trip Packing
 
 #### Get AI Packing Suggestion
@@ -561,46 +546,6 @@ POST /api/packing/suggest
     "extras": ["Adapter plug"]
   },
   "tips": "Pack neutral colours that mix and match easily."
-}
-```
-
----
-
-### Mood Board
-
-#### Save a Mood Board
-```
-POST /api/moodboard
-```
-**Body:**
-```json
-{
-  "mood": "minimal",
-  "savedOutfits": [
-    { "itemIds": ["itemId1", "itemId2"], "description": "Clean white shirt with beige trousers" }
-  ]
-}
-```
-
----
-
-#### Get All Mood Boards
-```
-GET /api/moodboard
-```
-
----
-
-#### Match Wardrobe to a Mood
-```
-POST /api/moodboard/match
-```
-**Body:**
-```json
-{
-  "mood": "minimal",
-  "occasion": "work",
-  "weather": "cool"
 }
 ```
 
@@ -768,6 +713,81 @@ POST /api/v1/admin/reviews/{caseNumber}/reply
 
 ---
 
+### Admin *(Admin only — requires `ROLE_ADMIN`)*
+
+#### Get All Users
+```
+GET /api/v1/admin/users
+```
+**Response:** Array of `{ id, email, name, role, phoneNumber }`
+
+---
+
+#### Get User Count
+```
+GET /api/v1/admin/users/count
+```
+**Response:**
+```json
+{ "totalUsers": 25, "users": 23, "admins": 2 }
+```
+
+---
+
+#### Get App Stats
+```
+GET /api/v1/admin/stats
+```
+**Response:**
+```json
+{
+  "totalUsers": 25,
+  "totalClothingItems": 142,
+  "totalOutfitsGenerated": 87,
+  "totalReviews": 12,
+  "totalSavedItems": 56
+}
+```
+
+---
+
+#### Edit a User
+```
+PATCH /api/v1/admin/users/{id}
+```
+**Body (any subset):**
+```json
+{ "name": "Jane", "email": "jane@example.com", "phoneNumber": "+16471234567", "role": "ADMIN" }
+```
+Valid role values: `USER`, `ADMIN`
+
+---
+
+#### Delete a User
+```
+DELETE /api/v1/admin/users/{id}
+```
+Deletes the user and all their data (clothing, outfit history, saved shopping, profile, OTP tokens).
+
+**Response:** `204 No Content`
+
+---
+
+#### Send Email to a User
+```
+POST /api/v1/admin/users/{id}/email
+```
+**Body:**
+```json
+{ "subject": "Important update", "content": "Hi Jane, just wanted to let you know..." }
+```
+**Response:**
+```json
+{ "message": "Email sent to jane@example.com" }
+```
+
+---
+
 ### Account
 
 #### Get Current User
@@ -825,7 +845,7 @@ Content-Type: multipart/form-data
 ```
 DELETE /api/v1/user/me
 ```
-Permanently deletes the user's account and **all associated data** — wardrobe, outfit history, saved shopping items, mood boards, profile, OTP tokens. A farewell email is sent to the user's registered address automatically.
+Permanently deletes the user's account and **all associated data** — wardrobe, outfit history, saved shopping items, profile, OTP tokens. A farewell email is sent to the user's registered address automatically.
 
 **Response:** `204 No Content`
 
