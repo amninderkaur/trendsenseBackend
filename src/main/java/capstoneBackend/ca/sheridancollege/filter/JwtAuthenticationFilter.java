@@ -37,7 +37,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         log.info(">>> JwtFilter hit: {} {}", request.getMethod(), path);
 
         if (path.startsWith("/api/v1/auth/") ||
-                path.startsWith("/uploads/")) {
+                path.startsWith("/uploads/") ||
+                path.equals("/privacy-policy.html")) {
             filterChain.doFilter(request, response);
             return;
         }
