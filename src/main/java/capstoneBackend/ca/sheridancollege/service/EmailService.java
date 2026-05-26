@@ -66,6 +66,14 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    public void sendCustomEmail(String toEmail, String subject, String content) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject(subject);
+        message.setText(content + "\n\n— Trend Sense Team");
+        mailSender.send(message);
+    }
+
     public void sendAdminReply(String toEmail, long caseNumber, String reply) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
