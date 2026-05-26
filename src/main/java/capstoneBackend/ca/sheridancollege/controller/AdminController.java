@@ -23,6 +23,7 @@ import capstoneBackend.ca.sheridancollege.beans.repositories.OtpTokenRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.OutfitHistoryRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.SavedShoppingRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserProfileRepository;
+import capstoneBackend.ca.sheridancollege.beans.repositories.ReviewRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserRepository;
 import capstoneBackend.ca.sheridancollege.service.EmailService;
 import lombok.AllArgsConstructor;
@@ -42,7 +43,42 @@ public class AdminController {
     private final OutfitHistoryRepository outfitHistoryRepository;
     private final SavedShoppingRepository savedShoppingRepository;
     private final OtpTokenRepository otpTokenRepository;
+    private final ReviewRepository reviewRepository;
     private final EmailService emailService;
+
+    /**
+     * GET /api/v1/admin/users/count
+     * Returns total number of users broken down by role.
+     */
+    @GetMapping("/users/count")
+    public ResponseEntity<Map<String, Object>> getUserCount() {
+        long total = userRepository.count();
+        long admins = userRepository.findAll().stream()
+                .filter(u -> u.getRole() == Role.ADMIN)
+                .count();
+
+        return ResponseEntity.ok(Map.of(
+                "totalUsers", total,
+                "users",      total - admins,
+                "admins",     admins
+        ));
+    }
+
+    /**
+     * GET /api/v1/admin/stats
+     * Returns overall app stats: users, clothing items, outfits, mood boards, reviews, saved items.
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getStats() {
+        return ResponseEntity.ok(Map.of(
+                "totalUsers",        userRepository.count(),
+                "totalClothingItems", clothingRepository.count(),
+                "totalOutfitsGenerated", outfitHistoryRepository.count(),
+                "totalMoodBoards",   moodBoardRepository.count(),
+                "totalReviews",      reviewRepository.count(),
+                "totalSavedItems",   savedShoppingRepository.count()
+        ));
+    }
 
     /**
      * POST /api/v1/admin/users/{id}/email

@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -54,6 +55,25 @@ public class UserProfileController {
         return userProfileRepository.findByUserId(user.getId())
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * DELETE /api/profile/colour
+     * Clears the user's saved colour analysis (season + palette).
+     */
+    @DeleteMapping("/colour")
+    public ResponseEntity<Map<String, Object>> deleteColourAnalysis(@AuthenticationPrincipal User user) {
+        UserProfile profile = userProfileRepository.findByUserId(user.getId()).orElse(null);
+        if (profile == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        profile.setColourSeason(null);
+        profile.setColourPalette(null);
+        userProfileRepository.save(profile);
+
+        log.info("Cleared colour analysis for user {}", user.getId());
+        return ResponseEntity.ok(Map.of("message", "Colour analysis cleared"));
     }
 
     @PatchMapping("/preferences")
