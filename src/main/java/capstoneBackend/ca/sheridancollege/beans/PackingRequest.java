@@ -13,4 +13,6 @@ public class PackingRequest {
     private String destination;
     private int tripLengthDays;
     private List<String> activities;
+    private String season;
+    private boolean lightPack;
 }

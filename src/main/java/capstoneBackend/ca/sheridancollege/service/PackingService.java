@@ -46,8 +46,10 @@ public class PackingService {
             "- Trip length: %d days\n" +
             "- Activities: %s\n" +
             "- Weather: %s\n" +
+            "- Season: %s\n" +
+            "- Light packing mode: %s\n" +
             "%s\n\n" +
-            "Generate a practical packing list with specific items and quantities (e.g. 'Light knit sweater x3').\n\n" +
+            "Generate a practical packing list%s with specific items and quantities (e.g. 'Light knit sweater x3').\n\n" +
             "Return a JSON object with exactly these fields:\n" +
             "{\n" +
             "  \"weatherSummary\": \"<brief weather description>\",\n" +
@@ -66,7 +68,10 @@ public class PackingService {
             request.getTripLengthDays(),
             activitiesText,
             weatherSummary,
-            preferencesText.isEmpty() ? "" : "- User style preferences: " + preferencesText
+            request.getSeason() != null ? request.getSeason() : "auto",
+            request.isLightPack() ? "yes, pack as few items as possible" : "no",
+            preferencesText.isEmpty() ? "" : "- User style preferences: " + preferencesText,
+            request.isLightPack() ? " (LIGHT MODE: minimize to essentials only)" : ""
         );
 
         // Step 4: Call Gemini
