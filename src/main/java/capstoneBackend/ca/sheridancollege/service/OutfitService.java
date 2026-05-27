@@ -14,6 +14,7 @@ import capstoneBackend.ca.sheridancollege.beans.OutfitSuggestionResponse;
 import capstoneBackend.ca.sheridancollege.beans.UserProfile;
 import capstoneBackend.ca.sheridancollege.beans.repositories.ClothingRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserProfileRepository;
+import capstoneBackend.ca.sheridancollege.util.GeminiUtils;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -108,13 +109,7 @@ public class OutfitService {
         List<String> selectedItemIds;
         String reasoning;
         try {
-            String cleaned = geminiResponse.trim();
-            // Strip markdown code block if present
-            if (cleaned.startsWith("```")) {
-                int firstNewline = cleaned.indexOf('\n');
-                if (firstNewline != -1) cleaned = cleaned.substring(firstNewline + 1);
-                if (cleaned.endsWith("```")) cleaned = cleaned.substring(0, cleaned.lastIndexOf("```")).trim();
-            }
+            String cleaned = GeminiUtils.stripMarkdownCodeBlock(geminiResponse);
             Map<String, Object> parsed = objectMapper.readValue(cleaned, new TypeReference<>() {});
             Object ids = parsed.get("selectedItemIds");
             if (ids instanceof List<?> list) {

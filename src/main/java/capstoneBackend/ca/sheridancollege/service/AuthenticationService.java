@@ -57,7 +57,7 @@ public class AuthenticationService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        if (user.isHasLoggedInBefore()) {
+        if (user.isLoggedInBefore()) {
             String jwtToken = jwtService.generateToken(user);
             return AuthenticationResponse.builder()
                     .token(jwtToken)
@@ -89,7 +89,7 @@ public class AuthenticationService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        user.setHasLoggedInBefore(true);
+        user.setLoggedInBefore(true);
         userRepository.save(user);
 
         String jwtToken = jwtService.generateToken(user);

@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -31,7 +32,8 @@ public class User implements UserDetails{
     private String profilePictureType;     // e.g. "image/jpeg"
     private String phoneNumber;
     private String deliveryMethod;         // "email" or "sms"
-    private boolean hasLoggedInBefore;
+    @Field("hasLoggedInBefore")
+    private boolean loggedInBefore;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

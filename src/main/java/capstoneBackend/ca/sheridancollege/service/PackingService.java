@@ -10,6 +10,7 @@ import capstoneBackend.ca.sheridancollege.beans.PackingListResponse;
 import capstoneBackend.ca.sheridancollege.beans.PackingRequest;
 import capstoneBackend.ca.sheridancollege.beans.UserProfile;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserProfileRepository;
+import capstoneBackend.ca.sheridancollege.util.GeminiUtils;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -87,7 +88,7 @@ public class PackingService {
 
         // Step 5: Parse response
         try {
-            String cleaned = stripMarkdown(geminiResponse);
+            String cleaned = GeminiUtils.stripMarkdownCodeBlock(geminiResponse);
             PackingListResponse parsed = objectMapper.readValue(cleaned, PackingListResponse.class);
             return PackingListResponse.builder()
                     .destination(request.getDestination())
@@ -126,13 +127,4 @@ public class PackingService {
         return sb.toString();
     }
 
-    private String stripMarkdown(String text) {
-        String trimmed = text.trim();
-        if (trimmed.startsWith("```")) {
-            int firstNewline = trimmed.indexOf('\n');
-            if (firstNewline != -1) trimmed = trimmed.substring(firstNewline + 1);
-            if (trimmed.endsWith("```")) trimmed = trimmed.substring(0, trimmed.lastIndexOf("```")).trim();
-        }
-        return trimmed;
-    }
 }

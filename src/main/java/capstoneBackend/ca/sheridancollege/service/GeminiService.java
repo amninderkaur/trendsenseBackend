@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import capstoneBackend.ca.sheridancollege.beans.ChatMessage;
 import capstoneBackend.ca.sheridancollege.beans.ClothingItem;
+import capstoneBackend.ca.sheridancollege.util.GeminiUtils;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -393,7 +394,7 @@ public class GeminiService {
             if (text == null || text.isBlank()) return List.of();
 
             // Gemini sometimes wraps output in ```json ... ``` — strip it
-            text = stripMarkdownCodeBlock(text);
+            text = GeminiUtils.stripMarkdownCodeBlock(text);
 
             List<Map<String, Object>> items = objectMapper.readValue(
                     text, new TypeReference<>() {});
@@ -472,20 +473,6 @@ public class GeminiService {
             log.error("Failed to extract text from Gemini response: {}", e.getMessage());
             return null;
         }
-    }
-
-    private String stripMarkdownCodeBlock(String text) {
-        String trimmed = text.trim();
-        if (trimmed.startsWith("```")) {
-            int firstNewline = trimmed.indexOf('\n');
-            if (firstNewline != -1) {
-                trimmed = trimmed.substring(firstNewline + 1);
-            }
-            if (trimmed.endsWith("```")) {
-                trimmed = trimmed.substring(0, trimmed.lastIndexOf("```")).trim();
-            }
-        }
-        return trimmed;
     }
 
     private String getString(Map<String, Object> map, String key) {

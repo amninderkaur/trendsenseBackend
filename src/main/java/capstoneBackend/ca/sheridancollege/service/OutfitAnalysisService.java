@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import capstoneBackend.ca.sheridancollege.beans.OutfitAnalysisResponse;
 import capstoneBackend.ca.sheridancollege.beans.UserProfile;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserProfileRepository;
+import capstoneBackend.ca.sheridancollege.util.GeminiUtils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -104,13 +105,7 @@ public class OutfitAnalysisService {
 
         // Step 5: Strip markdown backticks, parse JSON, map to OutfitAnalysisResponse
         try {
-            String cleaned = geminiResponse.trim();
-            if (cleaned.startsWith("```")) {
-                int firstNewline = cleaned.indexOf('\n');
-                if (firstNewline != -1) cleaned = cleaned.substring(firstNewline + 1);
-                if (cleaned.endsWith("```")) cleaned = cleaned.substring(0, cleaned.lastIndexOf("```")).trim();
-            }
-
+            String cleaned = GeminiUtils.stripMarkdownCodeBlock(geminiResponse);
             Map<String, Object> parsed = objectMapper.readValue(cleaned, new TypeReference<>() {});
 
             List<String> whatWorksWell = toStringList(parsed.get("whatWorksWell"));

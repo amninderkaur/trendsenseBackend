@@ -22,6 +22,9 @@ public class JwtService {
 	@Value("${jwt.secret}")
 	private String SECRET_KEY;
 
+	@Value("${jwt.expiration.ms}")
+	private long jwtExpirationMs;
+
 	    // Extract username (subject) from JWT token
 	    public String extractUsername(String token) {
 	        return extractClaim(token, Claims::getSubject);
@@ -43,8 +46,7 @@ public class JwtService {
 	                .setClaims(extraClaims)
 	                .setSubject(userDetails.getUsername())
 	                .setIssuedAt(new Date(System.currentTimeMillis()))
-	                // Set expiration to 24 hours
-	                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24))
+	                .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
 	                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
 	                .compact();
 	    }

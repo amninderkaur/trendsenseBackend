@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import capstoneBackend.ca.sheridancollege.beans.ColourAnalysisResponse;
 import capstoneBackend.ca.sheridancollege.beans.UserProfile;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserProfileRepository;
+import capstoneBackend.ca.sheridancollege.util.GeminiUtils;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -80,7 +81,7 @@ public class ColourService {
 
         ColourAnalysisResponse result;
         try {
-            result = objectMapper.readValue(stripMarkdown(geminiResponse), ColourAnalysisResponse.class);
+            result = objectMapper.readValue(GeminiUtils.stripMarkdownCodeBlock(geminiResponse), ColourAnalysisResponse.class);
         } catch (Exception e) {
             log.error("Failed to parse colour analysis response: {}", e.getMessage());
             return null;
@@ -108,13 +109,4 @@ public class ColourService {
         return value != null && !value.trim().isEmpty();
     }
 
-    private String stripMarkdown(String text) {
-        String trimmed = text.trim();
-        if (trimmed.startsWith("```")) {
-            int firstNewline = trimmed.indexOf('\n');
-            if (firstNewline != -1) trimmed = trimmed.substring(firstNewline + 1);
-            if (trimmed.endsWith("```")) trimmed = trimmed.substring(0, trimmed.lastIndexOf("```")).trim();
-        }
-        return trimmed;
-    }
 }

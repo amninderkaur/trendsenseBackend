@@ -19,6 +19,7 @@ import capstoneBackend.ca.sheridancollege.beans.UserProfile;
 import capstoneBackend.ca.sheridancollege.beans.repositories.ClothingRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserProfileRepository;
 import capstoneBackend.ca.sheridancollege.service.GeminiService.GroundedResponse;
+import capstoneBackend.ca.sheridancollege.util.GeminiUtils;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -38,26 +39,9 @@ public class ShoppingService {
 
     public ShoppingSuggestionsResponse suggest(String userId, ShoppingRequest request) {
 
-        // Step 1: Fetch user profile
+        // Step 1: Fetch user profile and extract style context
         UserProfile profile = userProfileRepository.findByUserId(userId).orElse(null);
-
-        String season        = val(profile != null ? profile.getColourSeason()    : null, "unknown");
-        String genderAes     = val(profile != null ? profile.getGenderAesthetic() : null, "mixed");
-        String modesty       = val(profile != null ? profile.getModestyLevel()    : null, "medium");
-        String culturalPrefs = join(profile != null ? profile.getCulturalPreferences() : null, "none");
-        String styles        = join(profile != null ? profile.getStyles()          : null, "any");
-        String favColors     = join(profile != null ? profile.getFavoriteColors()  : null, "any");
-        String avoidColors   = join(profile != null ? profile.getColorsToAvoid()   : null, "none");
-        String fit           = join(profile != null ? profile.getPreferredFit()    : null, "any");
-        String fabrics       = join(profile != null ? profile.getPreferredFabrics(): null, "any");
-        String dressFor      = join(profile != null ? profile.getDressFor()        : null, "general");
-        String climate       = val(profile != null ? profile.getClimate()          : null, "mixed");
-        String budgetPerItem = val(profile != null ? profile.getBudgetPerItem()    : null, "flexible");
-        String favBrands     = join(profile != null ? profile.getFavoriteBrands()  : null, "no preference");
-        String avoidBrands   = join(profile != null ? profile.getBrandsToAvoid()   : null, "none");
-        String priorities    = join(profile != null ? profile.getShoppingPriorities(): null, "price, quality");
-        String gender        = val(profile != null ? profile.getGender()           : null, "unspecified");
-        String ageGroup      = val(profile != null ? profile.getAgeGroup()         : null, "adult");
+        UserContext ctx = buildUserContext(profile);
 
         // Step 2: Fetch wardrobe and identify gaps
         List<ClothingItem> wardrobe = clothingRepository.findByUserId(userId);
@@ -89,16 +73,16 @@ public class ShoppingService {
             "item, category, whyItFits, estimatedPrice, storeName, storeType, link, nearbyLocation. " +
             "No markdown, no extra text.",
             request.getLocation(),
-            ageGroup, gender,
-            season,
-            styles,
-            favColors, avoidColors,
-            fit, fabrics,
-            dressFor, climate,
-            budgetPerItem, request.getBudget(), request.getCurrency() != null ? request.getCurrency() : "CAD",
-            priorities,
-            favBrands, avoidBrands,
-            genderAes, modesty, culturalPrefs,
+            ctx.ageGroup(), ctx.gender(),
+            ctx.season(),
+            ctx.styles(),
+            ctx.favColors(), ctx.avoidColors(),
+            ctx.fit(), ctx.fabrics(),
+            ctx.dressFor(), ctx.climate(),
+            ctx.budgetPerItem(), request.getBudget(), request.getCurrency() != null ? request.getCurrency() : "CAD",
+            ctx.priorities(),
+            ctx.favBrands(), ctx.avoidBrands(),
+            ctx.genderAesthetic(), ctx.modesty(), ctx.culturalPrefs(),
             gapsText,
             storePreference
         );
@@ -108,7 +92,7 @@ public class ShoppingService {
         if (grounded == null || grounded.text() == null) {
             log.error("Gemini returned null for shopping suggestions");
             return ShoppingSuggestionsResponse.builder()
-                    .season(season)
+                    .season(ctx.season())
                     .gapsIdentified(gaps)
                     .suggestions(List.of())
                     .build();
@@ -118,11 +102,12 @@ public class ShoppingService {
         List<ShoppingSuggestion> suggestions = parseAndMerge(grounded.text(), grounded.groundingUrls());
 
         // Step 6: Calculate total estimate and budget check
-        String totalEstimate = estimateTotal(suggestions);
-        boolean withinBudget = checkBudget(suggestions, request.getBudget());
+        double total = parseTotalPrice(suggestions);
+        String totalEstimate = total > 0 ? String.format("$%.2f CAD", total) : "N/A";
+        boolean withinBudget = total <= request.getBudget();
 
         return ShoppingSuggestionsResponse.builder()
-                .season(season)
+                .season(ctx.season())
                 .gapsIdentified(gaps)
                 .totalEstimate(totalEstimate)
                 .withinBudget(withinBudget)
@@ -133,6 +118,37 @@ public class ShoppingService {
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    /** Holds all style-related user preference strings extracted from the profile. */
+    private record UserContext(
+        String season, String genderAesthetic, String modesty, String culturalPrefs,
+        String styles, String favColors, String avoidColors, String fit, String fabrics,
+        String dressFor, String climate, String budgetPerItem,
+        String favBrands, String avoidBrands, String priorities,
+        String gender, String ageGroup
+    ) {}
+
+    private UserContext buildUserContext(UserProfile profile) {
+        return new UserContext(
+            val(profile != null ? profile.getColourSeason()         : null, "unknown"),
+            val(profile != null ? profile.getGenderAesthetic()      : null, "mixed"),
+            val(profile != null ? profile.getModestyLevel()         : null, "medium"),
+            join(profile != null ? profile.getCulturalPreferences() : null, "none"),
+            join(profile != null ? profile.getStyles()              : null, "any"),
+            join(profile != null ? profile.getFavoriteColors()      : null, "any"),
+            join(profile != null ? profile.getColorsToAvoid()       : null, "none"),
+            join(profile != null ? profile.getPreferredFit()        : null, "any"),
+            join(profile != null ? profile.getPreferredFabrics()    : null, "any"),
+            join(profile != null ? profile.getDressFor()            : null, "general"),
+            val(profile != null ? profile.getClimate()              : null, "mixed"),
+            val(profile != null ? profile.getBudgetPerItem()        : null, "flexible"),
+            join(profile != null ? profile.getFavoriteBrands()      : null, "no preference"),
+            join(profile != null ? profile.getBrandsToAvoid()       : null, "none"),
+            join(profile != null ? profile.getShoppingPriorities()  : null, "price, quality"),
+            val(profile != null ? profile.getGender()               : null, "unspecified"),
+            val(profile != null ? profile.getAgeGroup()             : null, "adult")
+        );
+    }
 
     private List<String> identifyGaps(List<ClothingItem> wardrobe, String focusCategory) {
         if (focusCategory != null && !focusCategory.isBlank()) {
@@ -152,7 +168,7 @@ public class ShoppingService {
     @SuppressWarnings("unchecked")
     private List<ShoppingSuggestion> parseAndMerge(String text, List<String> groundingUrls) {
         try {
-            String cleaned = stripMarkdown(text);
+            String cleaned = GeminiUtils.stripMarkdownCodeBlock(text);
 
             // Gemini may wrap the array in a root object — try array first, then object
             List<Map<String, Object>> raw;
@@ -193,8 +209,8 @@ public class ShoppingService {
         }
     }
 
-    private String estimateTotal(List<ShoppingSuggestion> suggestions) {
-        // Best-effort: sum up numeric parts of estimatedPrice strings
+    /** Sums the numeric portions of each suggestion's estimatedPrice field. */
+    private double parseTotalPrice(List<ShoppingSuggestion> suggestions) {
         double total = 0;
         for (ShoppingSuggestion s : suggestions) {
             if (s.getEstimatedPrice() != null) {
@@ -204,30 +220,7 @@ public class ShoppingService {
                 } catch (NumberFormatException ignored) {}
             }
         }
-        return total > 0 ? String.format("$%.2f CAD", total) : "N/A";
-    }
-
-    private boolean checkBudget(List<ShoppingSuggestion> suggestions, double budget) {
-        double total = 0;
-        for (ShoppingSuggestion s : suggestions) {
-            if (s.getEstimatedPrice() != null) {
-                try {
-                    String numeric = s.getEstimatedPrice().replaceAll("[^0-9.]", "");
-                    if (!numeric.isBlank()) total += Double.parseDouble(numeric);
-                } catch (NumberFormatException ignored) {}
-            }
-        }
-        return total <= budget;
-    }
-
-    private String stripMarkdown(String text) {
-        String trimmed = text.trim();
-        if (trimmed.startsWith("```")) {
-            int firstNewline = trimmed.indexOf('\n');
-            if (firstNewline != -1) trimmed = trimmed.substring(firstNewline + 1);
-            if (trimmed.endsWith("```")) trimmed = trimmed.substring(0, trimmed.lastIndexOf("```")).trim();
-        }
-        return trimmed;
+        return total;
     }
 
     private String str(Map<String, Object> map, String key) {

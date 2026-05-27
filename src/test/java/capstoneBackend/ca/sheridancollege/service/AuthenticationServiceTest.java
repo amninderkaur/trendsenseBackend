@@ -54,7 +54,7 @@ public class AuthenticationServiceTest {
     @Test
     void authenticate_ShouldReturnToken_WhenCredentialsValid() {
         AuthenticationRequest request = new AuthenticationRequest("user@test.com", "pass", null, null, "email");
-        User user = User.builder().email("user@test.com").password("encoded").role(Role.USER).hasLoggedInBefore(true).build();
+        User user = User.builder().email("user@test.com").password("encoded").role(Role.USER).loggedInBefore(true).build();
 
         when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
         when(jwtService.generateToken(user)).thenReturn("jwt-token");

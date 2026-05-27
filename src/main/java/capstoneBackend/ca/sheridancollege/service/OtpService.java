@@ -4,6 +4,7 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import capstoneBackend.ca.sheridancollege.beans.OtpToken;
@@ -15,6 +16,9 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class OtpService {
+
+    @Value("${otp.expiry.minutes}")
+    private int otpExpiryMinutes;
 
     private final OtpTokenRepository otpTokenRepository;
     private final EmailService emailService;
@@ -29,7 +33,7 @@ public class OtpService {
         OtpToken token = OtpToken.builder()
                 .email(email)
                 .otp(otp)
-                .expiresAt(LocalDateTime.now().plusMinutes(10))
+                .expiresAt(LocalDateTime.now().plusMinutes(otpExpiryMinutes))
                 .used(false)
                 .build();
         otpTokenRepository.save(token);
@@ -53,7 +57,7 @@ public class OtpService {
         if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
             return false;
         }
-        if (!token.getOtp().equals(otp)) {
+        if (!token.getOtp().equals(otp.trim())) {
             return false;
         }
         token.setUsed(true);
