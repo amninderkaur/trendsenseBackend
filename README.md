@@ -23,7 +23,7 @@ Make sure you have the following installed:
 ```bash
 git clone (https://github.com/amninderkaur/FASHIONAPP.git)
 git checkout backend
-cd ca.sheridancolleg
+cd ca.sheridancollege
 ```
 
 ---
@@ -42,6 +42,7 @@ You need the following before running the app:
 | `TWILIO_ACCOUNT_SID` | [Twilio Console](https://console.twilio.com) → Account Info |
 | `TWILIO_AUTH_TOKEN` | [Twilio Console](https://console.twilio.com) → Account Info |
 | `TWILIO_PHONE_NUMBER` | [Twilio Console](https://console.twilio.com) → Phone Numbers — must be in E.164 format |
+| `JWT_SECRET` | Any Base64-encoded secret string — a default is provided for local dev |
 
 ---
 
@@ -53,7 +54,6 @@ Create a file called `.env` or set these as environment variables on your machin
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/fashionapp
 GEMINI_API_KEY=your_gemini_api_key_here
 OPENWEATHER_API_KEY=your_openweather_api_key_here
-AI_SERVICE_URL=http://127.0.0.1:5000
 MAIL_USERNAME=your_gmail@gmail.com
 MAIL_PASSWORD=your_gmail_app_password
 TWILIO_ACCOUNT_SID=your_twilio_account_sid
@@ -71,7 +71,6 @@ TWILIO_PHONE_NUMBER=+1XXXXXXXXXX
 export MONGODB_URI="mongodb+srv://..."
 export GEMINI_API_KEY="..."
 export OPENWEATHER_API_KEY="..."
-export AI_SERVICE_URL="http://127.0.0.1:5000"
 ```
 
 **Option B — Terminal (Windows):**
@@ -79,7 +78,6 @@ export AI_SERVICE_URL="http://127.0.0.1:5000"
 set MONGODB_URI=mongodb+srv://...
 set GEMINI_API_KEY=...
 set OPENWEATHER_API_KEY=...
-set AI_SERVICE_URL=http://127.0.0.1:5000
 ```
 
 ---
@@ -114,10 +112,11 @@ You should get a `401 Unauthorized` — that means the server is up and JWT auth
 ### Notes
 
 - Max file upload size is **10MB** (configured in `application.properties`)
-- Uploaded wardrobe images are saved locally to `uploads/wardrobe/`
-- The `AI_SERVICE_URL` points to the Python FastAPI clothing detection service — if you don't have it running locally, wardrobe uploads will fail but all other endpoints still work
+- Wardrobe images are stored as base64 in MongoDB — no local file system required
+- Clothing detection and image generation use **Gemini Vision + Imagen** via the `GEMINI_API_KEY`
 - `JWT_SECRET` has a default value in `application.properties` so you don't need to set it locally
-- OTP codes expire after **10 minutes** — use `/resend-otp` to get a fresh one
+- JWT tokens expire after **24 hours** (configurable via `jwt.expiration.ms` in `application.properties`)
+- OTP codes expire after **10 minutes** — use `/resend-otp` to get a fresh one (configurable via `otp.expiry.minutes`)
 
 ---
 
@@ -248,6 +247,48 @@ Generates and sends a fresh OTP. The previous OTP is immediately invalidated. Us
 
 ---
 
+#### Forgot Password
+```
+POST /api/v1/auth/forgot-password
+```
+Sends an OTP to the user's email to begin the password reset flow. The response is identical whether or not the email exists (to avoid revealing registered accounts).
+
+**Body:**
+```json
+{
+  "email": "jane@example.com"
+}
+```
+**Response:**
+```json
+{ "message": "If that email is registered, an OTP has been sent" }
+```
+
+---
+
+#### Reset Password
+```
+POST /api/v1/auth/reset-password
+```
+Verifies the OTP from the forgot-password step, then sets the new password.
+
+**Body:**
+```json
+{
+  "email": "jane@example.com",
+  "otp": "123456",
+  "newPassword": "newSecurePassword"
+}
+```
+> `newPassword` must be at least 6 characters.
+
+**Response:**
+```json
+{ "message": "Password reset successful. Please log in." }
+```
+
+---
+
 ### Profile
 
 #### Save / Update Onboarding Profile
@@ -325,43 +366,49 @@ Valid values:
 
 #### Get All Wardrobe Items
 ```
-GET /api/v1/wardrobe
+GET /api/wardrobe
 ```
-**Response:** Array of `WardrobeItem` documents
-
----
-
-#### Get Single Wardrobe Item
-```
-GET /api/v1/wardrobe/{id}
-```
-**Response:** Single `WardrobeItem` document
+**Response:** Array of `ClothingItem` documents, each with `id`, `userId`, `tags` (type, color, style, occasion), `generatedImageBase64`, and `createdAt`.
 
 ---
 
 #### Upload Clothing Item
 ```
-POST /api/v1/wardrobe/upload
+POST /api/wardrobe/add
 Content-Type: multipart/form-data
 ```
+Sends the photo to Gemini Vision which detects all clothing items in the image, then Imagen generates a clean product photo for each one. All detected items are saved to the wardrobe in one request.
+
 | Field | Type | Description |
 |-------|------|-------------|
-| `file` | File | JPEG, PNG, or WebP image of the clothing item |
+| `file` | File | JPEG, PNG, or WebP image — can contain multiple clothing items |
 
 **Response:**
 ```json
 {
-  "message": "Clothing item added successfully",
-  "item": { "id": "...", "tag": "shirt", "cropUrls": ["..."] },
-  "detections": [ { "class": "shirt", "confidence": 0.97 } ]
+  "message": "Wardrobe updated successfully",
+  "itemsAdded": 2,
+  "items": [
+    {
+      "id": "abc123",
+      "tags": { "type": "jacket", "color": "black", "style": "casual", "occasion": ["casual", "work"] },
+      "generatedImageBase64": "<base64 PNG>",
+      "createdAt": "2025-01-01T00:00:00.000Z"
+    }
+  ]
 }
+```
+
+If no clothing is detected:
+```json
+{ "message": "No clothing items detected in the photo", "items": [] }
 ```
 
 ---
 
 #### Delete a Clothing Item
 ```
-DELETE /api/v1/wardrobe/{id}
+DELETE /api/wardrobe/{id}
 ```
 Permanently removes the item from the user's wardrobe. Returns `404` if not found or belongs to another user.
 
@@ -475,23 +522,27 @@ Uploads a photo and uses Gemini Vision to evaluate the outfit against weather, s
 POST /api/colour/analyze
 Content-Type: multipart/form-data
 ```
-| Field | Type | Description |
-|-------|------|-------------|
-| `file` | File | JPEG, PNG, or WebP photo of the person's face |
+Combines Gemini Vision analysis of the face photo with the user's self-reported details to determine their 12-season colour type. Result is automatically saved to the user's profile.
 
-Result is automatically saved to the user's profile.
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | File | Yes | JPEG, PNG, or WebP photo of the person's face |
+| `naturalHair` | String | No | Natural hair colour e.g. `"dark brown"` |
+| `currentHair` | String | No | Current/dyed hair colour if different |
+| `eyeColor` | String | No | Eye colour e.g. `"hazel"` |
+| `jewelry` | String | No | Preferred jewelry e.g. `"gold"` |
+| `veins` | String | No | Wrist vein colour e.g. `"blue-green"` |
+| `sunReaction` | String | No | How skin reacts to sun e.g. `"tans easily"` |
 
 **Response:**
 ```json
 {
-  "season": "Autumn",
-  "description": "Warm olive skin with dark brown eyes detected.",
-  "palette": {
-    "tops": ["#C4622D", "#8B5E3C", "#D4A853"],
-    "bottoms": ["#5C4033", "#7A6652", "#3B2F2F"],
-    "outerwear": ["#8B4513", "#6B4226", "#A0522D"],
-    "shoes": ["#5C3317", "#8B6914", "#704214"]
-  }
+  "season": "Soft Autumn",
+  "undertone": "Warm",
+  "contrast": "Low",
+  "bestJewelry": "Gold",
+  "summary": "You have warm, muted colouring with low contrast between your skin, hair, and eyes — classic Soft Autumn.",
+  "recommendedColors": ["#C4622D", "#8B5E3C", "#D4A853", "#7A6652", "#A0522D", "#5C4033", "#6B4226", "#B8975A", "#9B7653"]
 }
 ```
 
@@ -807,17 +858,51 @@ GET /api/v1/user/me
 
 ---
 
-#### Update Name
+#### Update Profile
 ```
 PATCH /api/v1/user/me
 ```
-**Body:**
+Updates name, phone number, and/or OTP delivery method. Send only the fields you want to change.
+
+**Body (any subset):**
 ```json
-{ "name": "Jane Smith" }
+{
+  "name": "Jane Smith",
+  "phoneNumber": "+16471234567",
+  "deliveryMethod": "sms"
+}
 ```
+> `deliveryMethod` accepts `"email"` or `"sms"`.
+
 **Response:**
 ```json
-{ "name": "Jane Smith" }
+{
+  "name": "Jane Smith",
+  "phoneNumber": "+16471234567",
+  "deliveryMethod": "sms"
+}
+```
+
+---
+
+#### Change Password
+```
+POST /api/v1/user/me/change-password
+```
+Verifies the current password, sets the new one, sends a security alert email, and re-triggers OTP verification on next login.
+
+**Body:**
+```json
+{
+  "currentPassword": "oldPassword123",
+  "newPassword": "newSecurePassword"
+}
+```
+> `newPassword` must be at least 6 characters.
+
+**Response:**
+```json
+{ "message": "Password changed. An OTP has been sent to verify your identity." }
 ```
 
 ---
