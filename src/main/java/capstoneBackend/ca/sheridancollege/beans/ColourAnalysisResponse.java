@@ -14,17 +14,9 @@ import lombok.NoArgsConstructor;
 public class ColourAnalysisResponse {
 
     private String season;
-    private String description;
-    private ColourPalette palette;
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ColourPalette {
-        private List<String> tops;
-        private List<String> bottoms;
-        private List<String> outerwear;
-        private List<String> shoes;
-    }
+    private String undertone;
+    private String contrast;
+    private String bestJewelry;
+    private String summary;
+    private List<String> recommendedColors;
 }

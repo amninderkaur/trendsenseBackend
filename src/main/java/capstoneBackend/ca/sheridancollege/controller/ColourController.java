@@ -28,11 +28,17 @@ public class ColourController {
     private static final List<String> ALLOWED_TYPES = List.of(
             "image/jpeg", "image/jpg", "image/png", "image/webp");
 
-    /** POST /api/colour/analyze — upload a photo, Gemini detects features automatically */
+    /** POST /api/colour/analyze — upload a photo + self-reported details for colour analysis */
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> analyze(
             @AuthenticationPrincipal User user,
-            @RequestPart("file") MultipartFile file) {
+            @RequestPart("file") MultipartFile file,
+            @RequestPart(value = "naturalHair",  required = false) String naturalHair,
+            @RequestPart(value = "currentHair",  required = false) String currentHair,
+            @RequestPart(value = "eyeColor",     required = false) String eyeColor,
+            @RequestPart(value = "jewelry",      required = false) String jewelry,
+            @RequestPart(value = "veins",        required = false) String veins,
+            @RequestPart(value = "sunReaction",  required = false) String sunReaction) {
 
         if (!ALLOWED_TYPES.contains(file.getContentType())) {
             return ResponseEntity.badRequest()
@@ -45,7 +51,13 @@ public class ColourController {
             ColourAnalysisResponse response = colourService.analyzeColourFromImage(
                     user.getId(),
                     file.getBytes(),
-                    file.getContentType());
+                    file.getContentType(),
+                    naturalHair,
+                    currentHair,
+                    eyeColor,
+                    jewelry,
+                    veins,
+                    sunReaction);
 
             if (response == null) {
                 return ResponseEntity.internalServerError()

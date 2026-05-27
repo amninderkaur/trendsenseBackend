@@ -66,6 +66,11 @@ public class UserProfile {
     private List<String> culturalPreferences; // e.g. ["modest coverage", "no sleeveless"]
 
     // ── 10. Colour Analysis Results ───────────────────────────────────────────
-    private String colourSeason;              // "Spring" | "Summer" | "Autumn" | "Winter"
-    private Map<String, List<String>> colourPalette; // e.g. {"tops": ["#C4622D", ...], ...}
+    private String colourSeason;              // e.g. "Light Spring", "True Winter"
+    private String colourUndertone;           // "Warm" | "Cool" | "Neutral"
+    private String colourContrast;            // "Low" | "Medium" | "High"
+    private String bestJewelry;               // "Gold" | "Silver" | "Both"
+    private List<String> recommendedColors;   // hex color codes
+    private String colourSummary;             // AI-generated summary
+    private Map<String, List<String>> colourPalette; // kept for legacy data
 }

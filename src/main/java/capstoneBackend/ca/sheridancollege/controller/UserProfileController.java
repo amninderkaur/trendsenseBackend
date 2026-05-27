@@ -69,6 +69,11 @@ public class UserProfileController {
         }
 
         profile.setColourSeason(null);
+        profile.setColourUndertone(null);
+        profile.setColourContrast(null);
+        profile.setBestJewelry(null);
+        profile.setRecommendedColors(null);
+        profile.setColourSummary(null);
         profile.setColourPalette(null);
         userProfileRepository.save(profile);
 

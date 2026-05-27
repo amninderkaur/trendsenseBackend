@@ -1,16 +1,12 @@
 package capstoneBackend.ca.sheridancollege.service;
 
 import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import capstoneBackend.ca.sheridancollege.beans.ColourAnalysisResponse;
-import capstoneBackend.ca.sheridancollege.beans.ColourAnalysisResponse.ColourPalette;
 import capstoneBackend.ca.sheridancollege.beans.UserProfile;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserProfileRepository;
 import lombok.AllArgsConstructor;
@@ -26,35 +22,59 @@ public class ColourService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * Analyses a photo of the person to detect their features, then determines
-     * their colour season and recommended palette. Saves results to their profile.
+     * Analyses a photo of the person combined with their self-reported colouring
+     * answers to determine their 12-season colour type and recommended palette.
+     * Saves results to their profile.
      */
-    public ColourAnalysisResponse analyzeColourFromImage(String userId, byte[] imageBytes, String mimeType) {
+    public ColourAnalysisResponse analyzeColourFromImage(
+            String userId,
+            byte[] imageBytes,
+            String mimeType,
+            String naturalHair,
+            String currentHair,
+            String eyeColor,
+            String jewelry,
+            String veins,
+            String sunReaction) {
 
         String base64Image = Base64.getEncoder().encodeToString(imageBytes);
 
+        StringBuilder userInfo = new StringBuilder();
+        if (isPresent(naturalHair))   userInfo.append("- Natural hair colour: ").append(naturalHair).append("\n");
+        if (isPresent(currentHair))   userInfo.append("- Current hair colour: ").append(currentHair).append("\n");
+        if (isPresent(eyeColor))      userInfo.append("- Eye colour: ").append(eyeColor).append("\n");
+        if (isPresent(jewelry))       userInfo.append("- Preferred jewelry: ").append(jewelry).append("\n");
+        if (isPresent(veins))         userInfo.append("- Wrist vein colour: ").append(veins).append("\n");
+        if (isPresent(sunReaction))   userInfo.append("- Reaction to sun: ").append(sunReaction).append("\n");
+
+        String userSection = userInfo.length() > 0
+            ? "The user has also provided these self-reported details:\n" + userInfo + "\n"
+            : "";
+
         String prompt =
-            "You are a professional personal colour analyst.\n" +
-            "Look at this photo of a person. Analyse their visible physical features: " +
-            "skin tone, eye colour, and hair colour.\n" +
-            "Based on these features, determine their colour season (Spring, Summer, Autumn, or Winter) " +
-            "and recommend 3 specific hex colour codes per clothing category that will complement them.\n\n" +
+            "You are a professional personal colour analyst trained in the 12-season colour system.\n" +
+            "Analyse the photo of the person and use any self-reported details provided below " +
+            "to determine their exact colour season.\n\n" +
+            userSection +
+            "The 12 possible seasons are:\n" +
+            "Light Spring, True Spring, Bright Spring, " +
+            "Light Summer, True Summer, Soft Summer, " +
+            "Soft Autumn, True Autumn, Deep Autumn, " +
+            "Deep Winter, True Winter, Bright Winter\n\n" +
             "Return a JSON object with exactly these fields:\n" +
             "{\n" +
-            "  \"season\": \"<Spring|Summer|Autumn|Winter>\",\n" +
-            "  \"description\": \"<1-2 sentences explaining the detected features and why these colours suit the user>\",\n" +
-            "  \"palette\": {\n" +
-            "    \"tops\": [\"#hex1\", \"#hex2\", \"#hex3\"],\n" +
-            "    \"bottoms\": [\"#hex1\", \"#hex2\", \"#hex3\"],\n" +
-            "    \"outerwear\": [\"#hex1\", \"#hex2\", \"#hex3\"],\n" +
-            "    \"shoes\": [\"#hex1\", \"#hex2\", \"#hex3\"]\n" +
-            "  }\n" +
+            "  \"season\": \"<one of the 12 seasons above, exact casing>\",\n" +
+            "  \"undertone\": \"<Warm|Cool|Neutral>\",\n" +
+            "  \"contrast\": \"<Low|Medium|High>\",\n" +
+            "  \"bestJewelry\": \"<Gold|Silver|Both>\",\n" +
+            "  \"summary\": \"<2-3 sentences describing the person's colouring and why this season suits them>\",\n" +
+            "  \"recommendedColors\": [\"#hex1\", \"#hex2\", \"#hex3\", \"#hex4\", \"#hex5\", \"#hex6\", \"#hex7\", \"#hex8\", \"#hex9\"]\n" +
             "}\n" +
             "Respond in valid JSON only. No extra text, no markdown, no code blocks.";
 
         String geminiResponse = geminiService.sendImagePrompt(base64Image, mimeType, prompt);
         if (geminiResponse == null) {
-            log.error("Gemini returned null for image-based colour analysis");
+            log.error("Gemini returned null for colour analysis");
             return null;
         }
 
@@ -70,22 +90,22 @@ public class ColourService {
             UserProfile profile = userProfileRepository.findByUserId(userId).orElse(new UserProfile());
             profile.setUserId(userId);
             profile.setColourSeason(result.getSeason());
-            if (result.getPalette() != null) {
-                Map<String, List<String>> paletteMap = new HashMap<>();
-                ColourPalette p = result.getPalette();
-                if (p.getTops() != null) paletteMap.put("tops", p.getTops());
-                if (p.getBottoms() != null) paletteMap.put("bottoms", p.getBottoms());
-                if (p.getOuterwear() != null) paletteMap.put("outerwear", p.getOuterwear());
-                if (p.getShoes() != null) paletteMap.put("shoes", p.getShoes());
-                profile.setColourPalette(paletteMap);
-            }
+            profile.setColourUndertone(result.getUndertone());
+            profile.setColourContrast(result.getContrast());
+            profile.setBestJewelry(result.getBestJewelry());
+            profile.setRecommendedColors(result.getRecommendedColors());
+            profile.setColourSummary(result.getSummary());
             userProfileRepository.save(profile);
             log.info("Saved colour season '{}' for user {}", result.getSeason(), userId);
         } catch (Exception e) {
-            log.error("Failed to save colour analysis to profile for user {}: {}", userId, e.getMessage());
+            log.error("Failed to save colour analysis for user {}: {}", userId, e.getMessage());
         }
 
         return result;
+    }
+
+    private boolean isPresent(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     private String stripMarkdown(String text) {
