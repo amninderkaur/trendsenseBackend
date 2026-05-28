@@ -12,8 +12,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import capstoneBackend.ca.sheridancollege.beans.ClothingItem;
 import capstoneBackend.ca.sheridancollege.beans.OutfitSuggestionResponse;
 import capstoneBackend.ca.sheridancollege.beans.UserProfile;
+import capstoneBackend.ca.sheridancollege.beans.UserTasteProfile;
 import capstoneBackend.ca.sheridancollege.beans.repositories.ClothingRepository;
 import capstoneBackend.ca.sheridancollege.beans.repositories.UserProfileRepository;
+import capstoneBackend.ca.sheridancollege.beans.repositories.UserTasteProfileRepository;
 import capstoneBackend.ca.sheridancollege.util.GeminiUtils;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,7 @@ public class OutfitService {
     private final GeminiService geminiService;
     private final WeatherService weatherService;
     private final UserProfileRepository userProfileRepository;
+    private final UserTasteProfileRepository userTasteProfileRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -70,6 +73,26 @@ public class OutfitService {
             }
         }
 
+        // Step 2c: Get taste profile (built from user's outfit ratings)
+        String tasteProfileLine = "";
+        UserTasteProfile tasteProfile = userTasteProfileRepository.findByUserId(userId).orElse(null);
+        if (tasteProfile != null && tasteProfile.getTotalRatings() >= 3) {
+            tasteProfileLine = String.format(
+                "Learning from this user's outfit ratings:\n" +
+                "They LOVE combinations like: %s\n" +
+                "Their favorite colors: %s\n" +
+                "Their favorite styles: %s\n" +
+                "They tend to DISLIKE: %s\n" +
+                "Colors they avoid: %s\n" +
+                "Strongly weight these preferences when selecting from their wardrobe.\n",
+                tasteProfile.getLovedCombinations() != null ? String.join(", ", tasteProfile.getLovedCombinations()) : "",
+                tasteProfile.getFavoriteColors() != null ? String.join(", ", tasteProfile.getFavoriteColors()) : "",
+                tasteProfile.getFavoriteStyles() != null ? String.join(", ", tasteProfile.getFavoriteStyles()) : "",
+                tasteProfile.getDislikedCombinations() != null ? String.join(", ", tasteProfile.getDislikedCombinations()) : "",
+                tasteProfile.getAvoidedColors() != null ? String.join(", ", tasteProfile.getAvoidedColors()) : ""
+            );
+        }
+
         // Step 3: Build Gemini outfit selection prompt
         String itemsList = wardrobe.stream()
                 .map(item -> String.format(
@@ -88,12 +111,13 @@ public class OutfitService {
             "Current weather in %s is %.1f°C and %s.\n" +
             "The occasion is %s.\n" +
             "%s" +
+            "%s" +
             "Select the best outfit from ONLY these items.\n" +
             "Return ONLY a valid JSON object with these fields:\n" +
             "selectedItemIds (array of item id strings),\n" +
             "reasoning (one sentence explaining why this outfit works for the weather and occasion).\n" +
             "Return ONLY the JSON, no markdown, no extra text.",
-            itemsList, weather.city(), weather.temp(), weather.description(), occasion, preferencesLine
+            itemsList, weather.city(), weather.temp(), weather.description(), occasion, preferencesLine, tasteProfileLine
         );
 
         // Step 4: Call Gemini for outfit selection
