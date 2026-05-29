@@ -569,6 +569,115 @@ Removes the saved colour season and palette from the user's profile. All other p
 
 ---
 
+### Style Trends & Wardrobe Matching
+
+#### Get Current Trends + Wardrobe Matches
+```
+GET /api/trends
+```
+Fetches current-season fashion trends from Gemini AI and cross-references the user's wardrobe to find which items they already own that are on-trend. Always fetched fresh — no caching.
+
+**Response:**
+```json
+{
+  "season": "Autumn",
+  "year": "2025",
+  "summary": "This season leans into earthy tones and quiet luxury...",
+  "fetchedAt": "2025-10-01T14:30:00",
+  "trends": [
+    {
+      "trendName": "Quiet Luxury",
+      "description": "Understated, high-quality pieces with minimal branding.",
+      "keyPieces": ["cashmere sweater", "tailored trousers", "loafers"],
+      "colors": ["camel", "cream", "taupe"],
+      "wearItHow": "Keep it simple — one focal piece, neutral base, clean lines."
+    }
+  ],
+  "wardrobeMatches": [
+    {
+      "itemId": "abc123",
+      "itemType": "trousers",
+      "color": "camel",
+      "imageBase64": "...",
+      "matchingTrends": ["Quiet Luxury"],
+      "stylingTip": "Pair with a cream blouse and loafers for an effortless on-trend look."
+    }
+  ]
+}
+```
+
+---
+
+### Outfit Rating & Taste Profile
+
+#### Rate a Saved Outfit
+```
+POST /api/outfit/rating
+```
+Rate an outfit from your saved history. Ratings are used to build a personalised taste profile.
+
+**Body:**
+```json
+{
+  "outfitHistoryId": "abc123",
+  "rating": 5
+}
+```
+> `rating` must be an integer from `1` to `5`.
+
+**Response:** Saved `OutfitRating` document with `id`, `ratedAt`, and extracted metadata (occasion, colors, styles).
+
+---
+
+#### Get All Ratings
+```
+GET /api/outfit/rating
+```
+Returns all of the user's outfit ratings, newest first.
+
+**Response:** Array of `OutfitRating` documents
+
+---
+
+#### Get Taste Profile
+```
+GET /api/outfit/rating/taste-profile
+```
+Returns an AI-derived taste profile based on the user's ratings. Requires at least 3 ratings.
+
+**Response (enough ratings):**
+```json
+{
+  "userId": "abc123",
+  "lovedCombinations": ["white shirt + tailored trousers"],
+  "dislikedCombinations": ["oversized hoodie + joggers"],
+  "favoriteColors": ["white", "camel", "black"],
+  "avoidedColors": ["neon green"],
+  "favoriteStyles": ["casual", "business casual"],
+  "favoriteOccasions": ["work", "brunch"],
+  "totalRatings": 7,
+  "averageRating": 4.3,
+  "lastUpdated": "2025-10-01T14:00:00"
+}
+```
+
+**Response (not enough ratings yet):**
+```json
+{ "message": "Rate at least 3 outfits to unlock your taste profile" }
+```
+
+---
+
+#### Delete a Rating
+```
+DELETE /api/outfit/rating/{id}
+```
+Removes the rating and rebuilds the taste profile automatically.
+
+**Response:** `204 No Content`
+
+---
+
 ### Trip Packing
 
 #### Get AI Packing Suggestion
