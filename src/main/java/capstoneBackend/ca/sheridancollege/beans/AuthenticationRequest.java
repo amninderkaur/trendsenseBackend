@@ -14,5 +14,5 @@ public class AuthenticationRequest {
     private String password;
     private String name;
     private String phoneNumber;
-    private String deliveryMethod; // "email" or "sms"
+    private String deliveryMethod; // to send the updates via email or sms
 }
