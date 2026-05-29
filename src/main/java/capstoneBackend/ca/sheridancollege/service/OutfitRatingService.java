@@ -3,7 +3,6 @@ package capstoneBackend.ca.sheridancollege.service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -169,7 +168,7 @@ public class OutfitRatingService {
         return values.stream()
                 .collect(Collectors.groupingBy(v -> v, Collectors.counting()))
                 .entrySet().stream()
-                .sorted(Comparator.<Map.Entry<String, Long>>comparingByValue().reversed())
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
                 .limit(limit)
                 .map(Map.Entry::getKey)
                 .toList();
