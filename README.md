@@ -37,6 +37,7 @@ You need the following before running the app:
 | `MONGODB_URI` | [MongoDB Atlas](https://www.mongodb.com/atlas) → Create cluster → Connect → Copy connection string |
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com) → Get API Key |
 | `OPENWEATHER_API_KEY` | [OpenWeatherMap](https://openweathermap.org/api) → Sign up → API Keys tab |
+| `GOOGLE_PLACES_API_KEY` | [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → Credentials → Enable **Places API (New)** |
 | `MAIL_USERNAME` | Gmail address used to send emails |
 | `MAIL_PASSWORD` | Gmail App Password (not your login password) — [Generate one here](https://myaccount.google.com/apppasswords) |
 | `TWILIO_ACCOUNT_SID` | [Twilio Console](https://console.twilio.com) → Account Info |
@@ -59,6 +60,7 @@ MAIL_PASSWORD=your_gmail_app_password
 TWILIO_ACCOUNT_SID=your_twilio_account_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token
 TWILIO_PHONE_NUMBER=+1XXXXXXXXXX
+GOOGLE_PLACES_API_KEY=your_google_places_api_key_here
 ```
 
 **Option A — IntelliJ (recommended):**
@@ -801,6 +803,25 @@ Returns all saved items, newest first.
 DELETE /api/shopping/saved/{id}
 ```
 **Response:** `204 No Content`
+
+---
+
+### Location
+
+#### Location Autocomplete
+```
+GET /api/location/autocomplete?q=<query>
+```
+Returns location name suggestions using the Google Places API (New). Used to autocomplete city/location input fields across the app (outfit suggestions, packing, shopping).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `q` | String | Partial location string e.g. `"Toron"` |
+
+**Response:**
+```json
+["Toronto, Ontario, Canada", "Toronto, Ohio, US", "Toronto, Kansas, US"]
+```
 
 ---
 
