@@ -4,6 +4,9 @@ import java.util.Base64;
 
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
+
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import capstoneBackend.ca.sheridancollege.beans.ColourAnalysisResponse;
@@ -53,9 +56,14 @@ public class ColourService {
             : "";
 
         String prompt =
-            "You are a professional personal colour analyst trained in the 12-season colour system.\n" +
-            "Analyse the photo of the person and use any self-reported details provided below " +
-            "to determine their exact colour season.\n\n" +
+            "You are a professional personal colour analyst trained in the 12-season colour system.\n\n" +
+            "STEP 1 — Validate the photo. Check whether the image shows a clearly visible human face " +
+            "(eyes, nose, mouth all visible and not obscured). " +
+            "If there is NO visible face — e.g. it is a landscape, object, animal, blurry, or only shows " +
+            "a body without a face — return ONLY this JSON and nothing else:\n" +
+            "{\"error\": \"NO_FACE\", \"errorReason\": \"No face detected. Please upload a clear photo that shows your face.\"}\n\n" +
+            "STEP 2 — If a face IS visible, analyse the person and use any self-reported details " +
+            "provided below to determine their exact colour season.\n\n" +
             userSection +
             "The 12 possible seasons are:\n" +
             "Light Spring, True Spring, Bright Spring, " +
@@ -81,7 +89,19 @@ public class ColourService {
 
         ColourAnalysisResponse result;
         try {
-            result = objectMapper.readValue(GeminiUtils.stripMarkdownCodeBlock(geminiResponse), ColourAnalysisResponse.class);
+            String cleaned = GeminiUtils.stripMarkdownCodeBlock(geminiResponse);
+            Map<String, Object> raw = objectMapper.readValue(cleaned, new TypeReference<>() {});
+
+            // Check if Gemini flagged a validation error (e.g. no face in photo)
+            if (raw.containsKey("error")) {
+                log.warn("Colour analysis rejected photo for user {}: {}", userId, raw.get("errorReason"));
+                return ColourAnalysisResponse.builder()
+                        .error((String) raw.get("error"))
+                        .errorReason((String) raw.get("errorReason"))
+                        .build();
+            }
+
+            result = objectMapper.convertValue(raw, ColourAnalysisResponse.class);
         } catch (Exception e) {
             log.error("Failed to parse colour analysis response: {}", e.getMessage());
             return null;

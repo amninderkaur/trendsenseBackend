@@ -13,6 +13,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ColourAnalysisResponse {
 
+    // Set when photo validation fails (no face detected)
+    private String error;
+    private String errorReason;
+
     private String season;
     private String undertone;
     private String contrast;

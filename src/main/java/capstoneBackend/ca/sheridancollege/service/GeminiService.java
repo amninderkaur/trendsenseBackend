@@ -237,12 +237,16 @@ public class GeminiService {
      * @param wardrobe the user's clothing items used to personalise suggestions
      * @return Gemini's reply text, or an error message
      */
-    public String chat(List<ChatMessage> history, String message, List<ClothingItem> wardrobe) {
-        // Build system instruction describing the wardrobe
+    public String chat(List<ChatMessage> history, String message, List<ClothingItem> wardrobe, String colourProfile) {
+        // Build system instruction describing the wardrobe and colour profile
         String wardrobeDescription = buildWardrobeDescription(wardrobe);
+        String colourContext = (colourProfile != null && !colourProfile.isBlank())
+            ? "\nThe user's colour profile: " + colourProfile + " Factor this into your outfit advice — suggest items and colors that complement their natural coloring.\n"
+            : "";
         String systemText =
             "You are a personal fashion assistant helping a user pick outfits. " +
             "Be friendly, concise, and specific. " +
+            colourContext +
             "The user's current wardrobe:\n" + wardrobeDescription;
 
         // Build contents array: prior history + current user message

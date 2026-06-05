@@ -11,57 +11,51 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import capstoneBackend.ca.sheridancollege.beans.ColourAnalysisResponse;
+import capstoneBackend.ca.sheridancollege.beans.BodyAnalysisResponse;
 import capstoneBackend.ca.sheridancollege.beans.User;
-import capstoneBackend.ca.sheridancollege.service.ColourService;
+import capstoneBackend.ca.sheridancollege.service.BodyAnalysisService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/colour")
+@RequestMapping("/api/body-analysis")
 @AllArgsConstructor
-public class ColourController {
+public class BodyAnalysisController {
 
-    private final ColourService colourService;
+    private final BodyAnalysisService bodyAnalysisService;
 
     private static final List<String> ALLOWED_TYPES = List.of(
             "image/jpeg", "image/jpg", "image/png", "image/webp");
 
-    /** POST /api/colour/analyze — upload a photo + self-reported details for colour analysis */
+    /** POST /api/body-analysis/analyze — upload full body photo + optional measurements */
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> analyze(
             @AuthenticationPrincipal User user,
             @RequestPart("file") MultipartFile file,
-            @RequestPart(value = "naturalHair",  required = false) String naturalHair,
-            @RequestPart(value = "currentHair",  required = false) String currentHair,
-            @RequestPart(value = "eyeColor",     required = false) String eyeColor,
-            @RequestPart(value = "jewelry",      required = false) String jewelry,
-            @RequestPart(value = "veins",        required = false) String veins,
-            @RequestPart(value = "sunReaction",  required = false) String sunReaction) {
+            @RequestPart(value = "height", required = false) String height,
+            @RequestPart(value = "weight", required = false) String weight,
+            @RequestPart(value = "chest",  required = false) String chest,
+            @RequestPart(value = "waist",  required = false) String waist,
+            @RequestPart(value = "hips",   required = false) String hips) {
 
         if (!ALLOWED_TYPES.contains(file.getContentType())) {
             return ResponseEntity.badRequest()
                     .body("Only JPEG, PNG, and WebP images are allowed.");
         }
 
-        log.info("Colour analysis requested by user {}", user.getId());
+        log.info("Body analysis requested by user {}", user.getId());
 
         try {
-            ColourAnalysisResponse response = colourService.analyzeColourFromImage(
+            BodyAnalysisResponse response = bodyAnalysisService.analyzeBody(
                     user.getId(),
                     file.getBytes(),
                     file.getContentType(),
-                    naturalHair,
-                    currentHair,
-                    eyeColor,
-                    jewelry,
-                    veins,
-                    sunReaction);
+                    height, weight, chest, waist, hips);
 
             if (response == null) {
                 return ResponseEntity.internalServerError()
-                        .body("Colour analysis service is temporarily unavailable. Please try again.");
+                        .body("Body analysis service is temporarily unavailable. Please try again.");
             }
             if (response.getError() != null) {
                 return ResponseEntity.badRequest().body(response.getErrorReason());
@@ -69,7 +63,7 @@ public class ColourController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error processing photo for colour analysis: {}", e.getMessage(), e);
+            log.error("Error processing photo for body analysis: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
                     .body("Failed to process image. Please try again.");
         }

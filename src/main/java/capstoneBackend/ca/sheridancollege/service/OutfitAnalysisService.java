@@ -56,6 +56,7 @@ public class OutfitAnalysisService {
                 ? String.join(", ", profile.getCulturalPreferences())
                 : "none";
         String season = profile != null && profile.getColourSeason() != null ? profile.getColourSeason() : "unspecified";
+        String bodyShape = profile != null && profile.getBodyShape() != null ? profile.getBodyShape() : "unspecified";
 
         // Step 3: Convert image to Base64 in memory only
         String base64Image;
@@ -80,11 +81,11 @@ public class OutfitAnalysisService {
                 "Analyze this outfit. %s" +
                 "%s" +
                 "User preferences: %s aesthetic, %s modesty, cultural preferences: %s. " +
-                "Their colour season is %s. " +
+                "Their colour season is %s. Their body shape is %s. " +
                 "Evaluate: 1) What occasion is this outfit suitable for? " +
                 "2) Rate overall style out of 10. " +
                 "3) Is it appropriate for the current weather (if weather is available)? " +
-                "4) What works well? " +
+                "4) What works well (including whether the cut suits their body shape and the colours suit their season)? " +
                 "5) What specific changes would improve it — different colours, add or remove layers, swap specific items? " +
                 "Return ONLY valid JSON with fields: occasion, styleScore, " +
                 "weatherVerdict (perfect/acceptable/not suitable/unknown), weatherReason, " +
@@ -92,7 +93,7 @@ public class OutfitAnalysisService {
                 "No markdown, no extra text.",
                 weatherContext,
                 occasionContext,
-                genderAesthetic, modestyLevel, culturalPreferences, season
+                genderAesthetic, modestyLevel, culturalPreferences, season, bodyShape
         );
 
         String geminiResponse = geminiService.sendImagePrompt(base64Image, mimeType, prompt);

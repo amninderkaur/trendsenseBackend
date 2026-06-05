@@ -73,4 +73,10 @@ public class UserProfile {
     private List<String> recommendedColors;   // hex color codes
     private String colourSummary;             // AI-generated summary
     private Map<String, List<String>> colourPalette; // kept for legacy data
+
+    // ── 11. Body Analysis Results ─────────────────────────────────────────────
+    private String bodyShape;                 // "Hourglass" | "Pear" | "Apple" | "Rectangle" | "Inverted Triangle"
+    private String bodyAnalysisSummary;       // AI-generated summary
+    private List<String> bodyBestStyles;      // silhouettes / cuts that flatter
+    private List<String> bodyStylesToAvoid;   // styles that don't suit the shape
 }

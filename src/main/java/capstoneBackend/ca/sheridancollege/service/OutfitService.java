@@ -73,6 +73,37 @@ public class OutfitService {
             }
         }
 
+        // Step 2b2: Get colour profile
+        String colourLine = "";
+        if (profile != null && profile.getColourSeason() != null) {
+            StringBuilder col = new StringBuilder();
+            col.append("The user's colour season is ").append(profile.getColourSeason());
+            if (profile.getColourUndertone() != null) {
+                col.append(" with ").append(profile.getColourUndertone().toLowerCase()).append(" undertones");
+            }
+            if (profile.getRecommendedColors() != null && !profile.getRecommendedColors().isEmpty()) {
+                col.append(". Their most flattering clothing colors are: ")
+                   .append(String.join(", ", profile.getRecommendedColors()));
+            }
+            col.append(". Where possible, prefer items in these colors or colors that complement their natural coloring.\n");
+            colourLine = col.toString();
+        }
+
+        // Step 2b3: Get body shape profile
+        String bodyShapeLine = "";
+        if (profile != null && profile.getBodyShape() != null) {
+            StringBuilder body = new StringBuilder();
+            body.append("The user's body shape is ").append(profile.getBodyShape()).append(".");
+            if (profile.getBodyBestStyles() != null && !profile.getBodyBestStyles().isEmpty()) {
+                body.append(" Styles that flatter them: ").append(String.join(", ", profile.getBodyBestStyles())).append(".");
+            }
+            if (profile.getBodyStylesToAvoid() != null && !profile.getBodyStylesToAvoid().isEmpty()) {
+                body.append(" Styles to avoid: ").append(String.join(", ", profile.getBodyStylesToAvoid())).append(".");
+            }
+            body.append(" Where possible, prefer clothing cuts that suit their body shape.\n");
+            bodyShapeLine = body.toString();
+        }
+
         // Step 2c: Get taste profile (built from user's outfit ratings)
         String tasteProfileLine = "";
         UserTasteProfile tasteProfile = userTasteProfileRepository.findByUserId(userId).orElse(null);
@@ -107,17 +138,35 @@ public class OutfitService {
                 .collect(Collectors.joining("\n"));
 
         String selectionPrompt = String.format(
-            "The user has these wardrobe items:\n%s\n\n" +
-            "Current weather in %s is %.1f°C and %s.\n" +
-            "The occasion is %s.\n" +
+            "You are a fashion expert helping a user get dressed for a specific occasion.\n\n" +
+            "Occasion: %s\n" +
+            "Weather: %.1f°C, %s in %s\n\n" +
+            "Their wardrobe:\n%s\n\n" +
             "%s" +
             "%s" +
-            "Select the best outfit from ONLY these items.\n" +
-            "Return ONLY a valid JSON object with these fields:\n" +
-            "selectedItemIds (array of item id strings),\n" +
-            "reasoning (one sentence explaining why this outfit works for the weather and occasion).\n" +
-            "Return ONLY the JSON, no markdown, no extra text.",
-            itemsList, weather.city(), weather.temp(), weather.description(), occasion, preferencesLine, tasteProfileLine
+            "%s" +
+            "%s" +
+            "STEP 1 — Evaluate suitability. Ask yourself: does this wardrobe contain items that are " +
+            "GENUINELY appropriate for '%s'? Apply strict real-world standards:\n" +
+            "- Gym / workout / sport: requires athletic shorts, joggers, leggings, sports top, " +
+            "  athletic shoes. Jeans, dress pants, formal shirts, boots are NOT acceptable.\n" +
+            "- Formal / business / interview: requires dress pants/skirt, blouse/shirt/blazer, " +
+            "  dress shoes. Hoodies, sneakers, casual tees are NOT acceptable.\n" +
+            "- Beach / swim: requires swimwear, flip flops, cover-ups. Jeans are NOT acceptable.\n" +
+            "- Apply the same logic for any other occasion — be strict and honest.\n\n" +
+            "STEP 2 — Based on your evaluation:\n" +
+            "  A) If the wardrobe HAS appropriate items: select the best combination. " +
+            "     Set selectedItemIds to those item ids and write a short reasoning explaining why " +
+            "     the outfit works for the occasion and weather. Also mention if the chosen colors " +
+            "     complement the user's colour season.\n" +
+            "  B) If the wardrobe DOES NOT have appropriate items: set selectedItemIds to an empty " +
+            "     array []. In reasoning, write: 'Your wardrobe does not have suitable [specific " +
+            "     item type] for [occasion]. Consider buying: [list 2-3 specific item types with " +
+            "     a one-line reason each].' Be specific — name the exact clothing types missing.\n\n" +
+            "Return ONLY valid JSON, no markdown, no extra text:\n" +
+            "{\"selectedItemIds\": [...], \"reasoning\": \"...\"}",
+            occasion, weather.temp(), weather.description(), weather.city(),
+            itemsList, preferencesLine, colourLine, bodyShapeLine, tasteProfileLine, occasion
         );
 
         // Step 4: Call Gemini for outfit selection
