@@ -472,7 +472,14 @@ public class GeminiService {
             Map<?, ?> content = (Map<?, ?>) ((Map<?, ?>) candidates.get(0)).get("content");
             List<?> parts = (List<?>) content.get("parts");
             if (parts == null || parts.isEmpty()) return null;
-            return (String) ((Map<?, ?>) parts.get(0)).get("text");
+            // gemini-2.5-flash includes thinking parts (thought=true) before the real reply — skip them
+            for (Object part : parts) {
+                Map<?, ?> partMap = (Map<?, ?>) part;
+                if (Boolean.TRUE.equals(partMap.get("thought"))) continue;
+                String text = (String) partMap.get("text");
+                if (text != null && !text.isBlank()) return text;
+            }
+            return null;
         } catch (Exception e) {
             log.error("Failed to extract text from Gemini response: {}", e.getMessage());
             return null;
