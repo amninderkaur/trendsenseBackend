@@ -1,5 +1,7 @@
 package capstoneBackend.ca.sheridancollege.beans;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -34,6 +36,8 @@ public class User implements UserDetails{
     private String deliveryMethod;         // "email" or "sms"
     @Field("hasLoggedInBefore")
     private boolean loggedInBefore;
+    @Builder.Default
+    private List<LocalDate> loginDates = new ArrayList<>();
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

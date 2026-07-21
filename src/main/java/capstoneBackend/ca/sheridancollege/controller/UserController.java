@@ -1,7 +1,9 @@
 package capstoneBackend.ca.sheridancollege.controller;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
@@ -164,6 +166,60 @@ public class UserController {
         otpService.generateAndSendOtp(fresh.getEmail(), deliveryMethod);
 
         return ResponseEntity.ok(Map.of("message", "Password changed. An OTP has been sent to verify your identity."));
+    }
+
+    /**
+     * GET /api/v1/user/me/wardrobe-count
+     * Returns the number of clothing items in the user's wardrobe.
+     */
+    @GetMapping("/me/wardrobe-count")
+    public ResponseEntity<Map<String, Object>> getWardrobeCount(@AuthenticationPrincipal User user) {
+        long count = clothingRepository.countByUserId(user.getId());
+        return ResponseEntity.ok(Map.of("wardrobeCount", count));
+    }
+
+    /**
+     * GET /api/v1/user/me/outfits-count
+     * Returns the number of outfits the user has generated (saved to history).
+     */
+    @GetMapping("/me/outfits-count")
+    public ResponseEntity<Map<String, Object>> getOutfitsCount(@AuthenticationPrincipal User user) {
+        long count = outfitHistoryRepository.countByUserId(user.getId());
+        return ResponseEntity.ok(Map.of("outfitsCount", count));
+    }
+
+    /**
+     * GET /api/v1/user/me/saved-looks-count
+     * Returns the number of shopping looks the user has saved.
+     */
+    @GetMapping("/me/saved-looks-count")
+    public ResponseEntity<Map<String, Object>> getSavedLooksCount(@AuthenticationPrincipal User user) {
+        long count = savedShoppingRepository.countByUserId(user.getId());
+        return ResponseEntity.ok(Map.of("savedLooksCount", count));
+    }
+
+    /**
+     * GET /api/v1/user/me/login-streak
+     * Returns the number of consecutive days the user has logged in up to today.
+     */
+    @GetMapping("/me/login-streak")
+    public ResponseEntity<Map<String, Object>> getLoginStreak(@AuthenticationPrincipal User user) {
+        List<LocalDate> loginDates = user.getLoginDates();
+        int streak = 0;
+
+        if (loginDates != null && !loginDates.isEmpty()) {
+            LocalDate cursor = LocalDate.now();
+            // Allow streak to count from today or yesterday (in case they log in later today)
+            if (!loginDates.contains(cursor)) {
+                cursor = cursor.minusDays(1);
+            }
+            while (loginDates.contains(cursor)) {
+                streak++;
+                cursor = cursor.minusDays(1);
+            }
+        }
+
+        return ResponseEntity.ok(Map.of("loginStreak", streak));
     }
 
     /**

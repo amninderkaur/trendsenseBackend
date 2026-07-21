@@ -1,5 +1,7 @@
 package capstoneBackend.ca.sheridancollege.service;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Base64;
 
 import org.springframework.security.authentication.AuthenticationManager;
@@ -58,6 +60,8 @@ public class AuthenticationService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         if (user.isLoggedInBefore()) {
+            recordLoginDate(user);
+            userRepository.save(user);
             String jwtToken = jwtService.generateToken(user);
             return AuthenticationResponse.builder()
                     .token(jwtToken)
@@ -84,12 +88,23 @@ public class AuthenticationService {
         return bytes != null ? Base64.getEncoder().encodeToString(bytes) : null;
     }
 
+    private void recordLoginDate(User user) {
+        LocalDate today = LocalDate.now();
+        if (user.getLoginDates() == null) {
+            user.setLoginDates(new ArrayList<>());
+        }
+        if (!user.getLoginDates().contains(today)) {
+            user.getLoginDates().add(today);
+        }
+    }
+
     // Called after OTP is verified — returns JWT
     public AuthenticationResponse generateTokenForVerifiedUser(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         user.setLoggedInBefore(true);
+        recordLoginDate(user);
         userRepository.save(user);
 
         String jwtToken = jwtService.generateToken(user);
