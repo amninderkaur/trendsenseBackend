@@ -27,4 +27,21 @@ public final class GeminiUtils {
         }
         return trimmed;
     }
+
+    /**
+     * Extracts a JSON array from text that may contain surrounding prose.
+     * Finds the outermost {@code [ ... ]} delimiters and returns that substring.
+     * Falls back to the original text if no array delimiters are found.
+     *
+     * @param text text that should contain a JSON array
+     * @return the extracted JSON array string, or the original text unchanged
+     */
+    public static String extractJsonArray(String text) {
+        int start = text.indexOf('[');
+        int end = text.lastIndexOf(']');
+        if (start != -1 && end != -1 && end > start) {
+            return text.substring(start, end + 1);
+        }
+        return text;
+    }
 }

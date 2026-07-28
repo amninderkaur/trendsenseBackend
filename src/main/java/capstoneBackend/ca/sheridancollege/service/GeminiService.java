@@ -362,6 +362,9 @@ public class GeminiService {
                     )),
                     Map.of("text", DETECT_PROMPT)
                 ))
+            ),
+            "generationConfig", Map.of(
+                "responseMimeType", "application/json"
             )
         );
     }
@@ -397,8 +400,12 @@ public class GeminiService {
             String text = (String) ((Map<?, ?>) parts.get(0)).get("text");
             if (text == null || text.isBlank()) return List.of();
 
-            // Gemini sometimes wraps output in ```json ... ``` — strip it
+            // Strip markdown fences; if responseMimeType didn't suppress them
             text = GeminiUtils.stripMarkdownCodeBlock(text);
+            // Fallback: extract the JSON array if Gemini added surrounding prose
+            if (!text.trim().startsWith("[")) {
+                text = GeminiUtils.extractJsonArray(text);
+            }
 
             List<Map<String, Object>> items = objectMapper.readValue(
                     text, new TypeReference<>() {});

@@ -1,10 +1,10 @@
 package capstoneBackend.ca.sheridancollege.controller;
 
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -105,23 +105,30 @@ public class ClothingController {
                 ));
             }
 
-            log.info("Detected {} clothing item(s), generating product images...", detected.size());
+            log.info("Detected {} clothing item(s), generating product images in parallel...", detected.size());
 
-            // 3) For each detected item: generate a product image and save to DB
-            List<ClothingItem> savedItems = new ArrayList<>();
-            for (DetectedItem detectedItem : detected) {
-                String generatedBase64 = geminiService.generateItemImage(detectedItem.getDescription());
+            // 3) Generate all product images in parallel, then save to DB
+            List<CompletableFuture<ClothingItem>> futures = detected.stream()
+                    .map(detectedItem -> CompletableFuture.supplyAsync(() -> {
+                        String generatedBase64 = geminiService.generateItemImage(detectedItem.getDescription());
 
-                ClothingItem clothingItem = new ClothingItem();
-                clothingItem.setUserId(user.getId());
-                clothingItem.setGeneratedImageBase64(generatedBase64);
-                clothingItem.setTags(detectedItem.toTags());
-                clothingItem.setCreatedAt(new Date());
+                        ClothingItem clothingItem = new ClothingItem();
+                        clothingItem.setUserId(user.getId());
+                        clothingItem.setGeneratedImageBase64(generatedBase64);
+                        clothingItem.setTags(detectedItem.toTags());
+                        clothingItem.setCreatedAt(new Date());
 
-                ClothingItem saved = clothingRepository.save(clothingItem);
-                savedItems.add(saved);
-                log.info("Saved clothing item: {} ({})", saved.getId(), detectedItem.getType());
-            }
+                        ClothingItem saved = clothingRepository.save(clothingItem);
+                        log.info("Saved clothing item: {} ({})", saved.getId(), detectedItem.getType());
+                        return saved;
+                    }))
+                    .toList();
+
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+            List<ClothingItem> savedItems = futures.stream()
+                    .map(CompletableFuture::join)
+                    .toList();
 
             return ResponseEntity.ok(Map.of(
                     "message", "Wardrobe updated successfully",
