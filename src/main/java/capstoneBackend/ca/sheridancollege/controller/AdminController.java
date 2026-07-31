@@ -68,10 +68,13 @@ public class AdminController {
      */
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getStats() {
+        long outfitsGenerated = outfitHistoryRepository.count();
+
         return ResponseEntity.ok(Map.of(
                 "totalUsers",            userRepository.count(),
-                "totalClothingItems",    clothingRepository.count(),
-                "totalOutfitsGenerated", outfitHistoryRepository.count(),
+                "totalClothes",          clothingRepository.count(),
+                "totalOutfitsGenerated", outfitsGenerated,
+                "usageCount",            outfitsGenerated,
                 "totalReviews",          reviewRepository.count(),
                 "totalSavedItems",       savedShoppingRepository.count()
         ));
@@ -120,11 +123,13 @@ public class AdminController {
     public ResponseEntity<List<Map<String, Object>>> getAllUsers() {
         List<Map<String, Object>> users = userRepository.findAll().stream()
                 .map(u -> Map.<String, Object>of(
-                        "id",          u.getId(),
-                        "email",       u.getEmail() != null ? u.getEmail() : "",
-                        "name",        u.getName() != null ? u.getName() : "",
-                        "role",        u.getRole() != null ? u.getRole().name() : Role.USER.name(),
-                        "phoneNumber", u.getPhoneNumber() != null ? u.getPhoneNumber() : ""
+                        "id",           u.getId(),
+                        "email",        u.getEmail() != null ? u.getEmail() : "",
+                        "name",         u.getName() != null ? u.getName() : "",
+                        "role",         u.getRole() != null ? u.getRole().name() : Role.USER.name(),
+                        "phoneNumber",  u.getPhoneNumber() != null ? u.getPhoneNumber() : "",
+                        "clothesCount", clothingRepository.countByUserId(u.getId()),
+                        "usageCount",   outfitHistoryRepository.countByUserId(u.getId())
                 ))
                 .toList();
 
